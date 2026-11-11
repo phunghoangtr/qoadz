@@ -3,25 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Đăng Ký & Quản Lý Giải Đấu Taekwondo</title>
+    <title>Hệ Thống Quản Lý Giải Đấu Taekwondo Chuẩn Quốc Tế</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Font Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        tkd: {
-                            red: '#DC2626',      /* Hong - Đỏ */
-                            blue: '#2563EB',     /* Cheong - Xanh */
-                            dark: '#0F172A',
-                            gold: '#F59E0B'
-                        }
+                        tkd: { red: '#DC2626', blue: '#2563EB', dark: '#0F172A', gold: '#F59E0B' }
                     },
                     fontFamily: { sans: ['Inter', 'sans-serif'] }
                 }
@@ -29,12 +26,22 @@
         }
     </script>
     <style>
-        .bracket-node { position: relative; }
-        .bracket-node::after {
-            content: ''; position: absolute; right: -20px; top: 50%; width: 20px; height: 2px; background-color: #cbd5e1; z-index: 1;
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; }
+            header { display: none !important; }
+            main { padding: 0 !important; max-width: 100% !important; }
+            .print-container { border: none !important; box-shadow: none !important; padding: 0 !important; }
         }
-        .bracket-node.no-line::after { display: none; }
-        @media print { .no-print { display: none !important; } }
+        .bracket-box {
+            background: #fff;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            font-size: 11px;
+            padding: 6px 10px;
+            width: 190px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
     </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 min-h-screen flex flex-col">
@@ -47,18 +54,16 @@
                     <i class="fa-solid fa-hand-fist text-2xl text-yellow-400"></i>
                 </div>
                 <div>
-                    <!-- Cho phép Admin tự nhập Mã/Tên giải đấu ngay tại tiêu đề -->
                     <div class="flex items-center gap-2">
-                        <input type="text" id="tournamentCodeInput" onchange="saveTournamentCode()" placeholder="Nhập Mã/Tên Giải (VD: GiaiTKD_2026)" title="Click để đổi mã giải" class="bg-slate-800 text-yellow-400 font-black text-sm px-2 py-1 rounded border border-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-400 w-52">
+                        <input type="text" id="tournamentCodeInput" onchange="saveTournamentCode()" placeholder="Tên Giải (VD: GiaiTKD_2026)" class="bg-slate-800 text-yellow-400 font-black text-sm px-2 py-1 rounded border border-slate-600 focus:outline-none w-52">
                         <span id="roleBadge" class="bg-yellow-400 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Admin BTC</span>
                     </div>
-                    <p id="subHeaderDesc" class="text-xs text-slate-300 font-medium mt-1">Hệ thống quản lý giải đấu và phân quyền đơn vị</p>
+                    <p id="subHeaderDesc" class="text-xs text-slate-300 font-medium mt-1">Hệ thống quản lý bốc thăm và sơ đồ thi đấu Taekwondo</p>
                 </div>
             </div>
 
             <!-- Global Admin Actions -->
             <div id="adminGlobalControls" class="flex items-center space-x-2 flex-wrap gap-2">
-                <!-- Cài đặt hạn chót (Admin) -->
                 <div class="flex items-center bg-slate-800/90 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs gap-2">
                     <span class="text-slate-300 font-bold"><i class="fa-regular fa-clock text-yellow-400"></i> Hạn chót:</span>
                     <input type="datetime-local" id="deadlineInput" class="bg-slate-900 text-white px-2 py-1 rounded border border-slate-600 text-xs font-semibold focus:outline-none">
@@ -69,10 +74,9 @@
                     <i class="fa-solid fa-lock-open"></i> Đang mở Đăng Ký
                 </button>
 
-                <!-- Nút nhập file từ đoàn gửi về -->
-                <label class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white py-2 px-3 rounded-xl transition flex items-center gap-1.5 cursor-pointer" title="Nhập file JSON do các đoàn gửi lên">
-                    <i class="fa-solid fa-file-import"></i> Nhập File Đăng Ký
-                    <input type="file" id="importJsonInput" accept=".json" onchange="importAthleteData(event)" class="hidden">
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white py-2 px-3 rounded-xl transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-file-arrow-down"></i> Nhập File (Excel, Word, JSON)
+                    <input type="file" id="importUniversalInput" accept=".xlsx, .xls, .docx, .csv, .json, .txt" onchange="importUniversalAthleteData(event)" class="hidden">
                 </label>
 
                 <button onclick="resetAllData()" class="bg-red-600 hover:bg-red-700 text-xs font-semibold text-white py-2 px-3 rounded-xl transition" title="Xóa toàn bộ">
@@ -88,13 +92,13 @@
                     <i class="fa-solid fa-user-plus"></i> Đăng Ký VĐV (<span id="navCountAthletes">0</span>)
                 </button>
                 <button onclick="switchTab('bracket')" id="tab-bracket" class="nav-tab text-sm font-bold px-5 py-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-2 transition">
-                    <i class="fa-solid fa-sitemap"></i> Sơ Đồ & Trận Đấu
+                    <i class="fa-solid fa-sitemap"></i> Sơ Đồ Nhánh Đấu Chuẩn In
                 </button>
                 <button onclick="switchTab('matchlist')" id="tab-matchlist" class="nav-tab text-sm font-bold px-5 py-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-2 transition">
-                    <i class="fa-solid fa-list-check"></i> Danh Sách Trận (Xanh/Đỏ)
+                    <i class="fa-solid fa-list-check"></i> Sắp Xếp & Danh Sách Trận Toàn Giải
                 </button>
                 <button onclick="switchTab('medals')" id="tab-medals" class="nav-tab text-sm font-bold px-5 py-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-2 transition">
-                    <i class="fa-solid fa-medal"></i> Bảng Huy Chương
+                    <i class="fa-solid fa-medal"></i> Bảng Huy Chương Toàn Đoàn
                 </button>
                 <button onclick="switchTab('config')" id="tab-config" class="admin-only text-sm font-bold px-5 py-3 border-b-2 border-transparent text-slate-400 hover:text-white flex items-center gap-2 transition">
                     <i class="fa-solid fa-sliders"></i> Cấu Hình Hạng Cân
@@ -107,7 +111,7 @@
     </header>
 
     <!-- Main Container -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full">
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow w-full space-y-6">
 
         <!-- Notification Toast -->
         <div id="toast" class="hidden fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700">
@@ -115,212 +119,219 @@
             <span id="toast-msg" class="text-sm font-medium">Thông báo!</span>
         </div>
 
-        <!-- ================= TAB 1: ĐĂNG KÝ VĐV ================= -->
+        <!-- TAB 1: ĐĂNG KÝ VĐV -->
         <section id="view-register" class="tab-content space-y-6">
-            
-            <!-- Banner Thông Báo Hạn Chót -->
             <div id="deadlineNoticeBanner" class="bg-blue-50 border border-blue-200 text-blue-900 p-4 rounded-2xl flex items-center justify-between flex-wrap gap-3 shadow-sm">
                 <div class="flex items-center gap-3">
                     <i class="fa-solid fa-clock text-tkd-blue text-2xl"></i>
                     <div>
                         <h4 class="font-bold text-sm uppercase">Thời Hạn Đăng Ký Giải Đấu</h4>
-                        <p class="text-xs text-slate-600" id="deadlineNoticeText">Chưa thiết lập hạn chót đăng ký[cite: 2].</p>
+                        <p class="text-xs text-slate-600" id="deadlineNoticeText">Chưa thiết lập hạn chót đăng ký.</p>
                     </div>
                 </div>
                 <div id="exportActionForClient" class="hidden">
                     <button onclick="exportUnitData()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-md">
-                        <i class="fa-solid fa-file-export"></i> Tải File Danh Sách Đã Đăng Ký Gửi BTC
+                        <i class="fa-solid fa-file-export"></i> Tải File Danh Sách Đăng Ký
                     </button>
                 </div>
             </div>
 
-            <!-- Cảnh Báo Khi Hết Hạn / Khóa -->
             <div id="lockedWarning" class="hidden bg-red-50 border-2 border-red-300 text-red-800 p-4 rounded-2xl text-sm font-bold flex items-center gap-3 shadow-md">
                 <i class="fa-solid fa-circle-xmark text-red-600 text-2xl"></i>
-                <span id="lockWarningText">CỔNG ĐĂNG KÝ ĐÃ HẾT HẠN HOẶC ĐÃ BỊ KHÓA LẠI! Bạn không thể thêm hoặc sửa thông tin[cite: 2].</span>
+                <span>CỔNG ĐĂNG KÝ ĐÃ KHÓA HOẶC HẾT HẠN!</span>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Registration Form -->
                 <div id="registrationFormCard" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                    <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
-                        <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-address-card text-tkd-blue"></i>
-                            <span id="form-title">Đăng Ký VĐV / Nội Dung Mới</span>
-                        </h2>
-                    </div>
-
+                    <h2 class="font-bold text-lg text-slate-800 mb-4 pb-2 border-b flex items-center gap-2">
+                        <i class="fa-solid fa-address-card text-tkd-blue"></i> Đăng Ký VĐV / Nội Dung
+                    </h2>
                     <form id="athleteForm" onsubmit="handleSaveAthlete(event)" class="space-y-4">
                         <input type="hidden" id="athleteId">
-                        
                         <div>
-                            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Họ và Tên VĐV (hoặc Tên Đội) *</label>
-                            <input type="text" id="fullName" required placeholder="Nguyễn Văn An (hoặc Đội 1...)" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-tkd-blue">
+                            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Họ và Tên VĐV *</label>
+                            <input type="text" id="fullName" required placeholder="Nguyễn Văn An..." class="w-full px-3.5 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-tkd-blue">
                         </div>
-
                         <div>
                             <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Đơn Vị / CLB *</label>
-                            <input type="text" id="unit" required placeholder="Ví dụ: Quận 1..." class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-tkd-blue">
+                            <input type="text" id="unit" required placeholder="Ví dụ: Quận 1..." class="w-full px-3.5 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-tkd-blue">
                         </div>
-
-                        <!-- Loại Nội Dung: Đối Kháng & Quyền -->
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Môn / Nội dung *</label>
-                                <select id="categoryType" required onchange="onCategoryTypeChange()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl font-bold bg-slate-50">
+                                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Nội dung *</label>
+                                <select id="categoryType" required onchange="onCategoryTypeChange()" class="w-full px-3 py-2 text-sm border rounded-xl font-bold bg-slate-50">
                                     <option value="Đối kháng">Đối kháng</option>
                                     <option value="Quyền">Quyền</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Hình thức *</label>
-                                <select id="subCategory" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl font-bold bg-slate-50">
-                                    <!-- Dynamic Options -->
-                                </select>
+                                <select id="subCategory" required class="w-full px-3 py-2 text-sm border rounded-xl font-bold bg-slate-50"></select>
                             </div>
                         </div>
-
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="grid grid-cols-3 gap-2">
                             <div>
                                 <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Giới tính *</label>
-                                <select id="gender" required onchange="updateWeightOptions()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl">
+                                <select id="gender" required onchange="updateWeightOptions()" class="w-full px-2.5 py-2 text-xs border rounded-xl">
                                     <option value="Nam">Nam</option>
                                     <option value="Nữ">Nữ</option>
-                                    <option value="Nam Nữ">Nam Nữ (Đôi hỗn hợp)</option>
+                                    <option value="Nam Nữ">Nam Nữ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Lứa tuổi *</label>
+                                <select id="ageGroup" required class="w-full px-2.5 py-2 text-xs font-bold border rounded-xl bg-slate-50 text-blue-700">
+                                    <option value="Lứa tuổi 1">Lứa tuổi 1</option>
+                                    <option value="Lứa tuổi 2">Lứa tuổi 2</option>
+                                    <option value="Lứa tuổi 3">Lứa tuổi 3</option>
+                                    <option value="Lứa tuổi 4">Lứa tuổi 4</option>
                                 </select>
                             </div>
                             <div id="weightClassWrapper">
-                                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Hạng cân chuẩn *</label>
-                                <select id="weightClass" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl"></select>
+                                <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Hạng cân *</label>
+                                <select id="weightClass" class="w-full px-2.5 py-2 text-xs border rounded-xl"></select>
                             </div>
                         </div>
-
-                        <div class="pt-2">
-                            <button type="submit" id="submitBtn" class="w-full bg-tkd-blue hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow-md transition flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-user-plus"></i> Lưu Đăng Ký Vào Danh Sách
-                            </button>
-                        </div>
+                        <button type="submit" class="w-full bg-tkd-blue hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl shadow-md transition">
+                            <i class="fa-solid fa-user-plus"></i> Lưu Đăng Ký
+                        </button>
                     </form>
                 </div>
 
-                <!-- List Athletes -->
                 <div class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
-                    <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 flex-wrap gap-2">
-                        <div>
-                            <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-                                <i class="fa-solid fa-users text-tkd-red"></i> Danh Sách Đăng Ký
-                            </h2>
-                            <p class="text-xs text-slate-500">Hiển thị toàn bộ vận động viên / nhóm thi đấu đã đăng ký[cite: 2].</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <input type="text" id="searchAthleteKey" oninput="renderAthletesTable()" placeholder="Tìm kiếm VĐV/Đơn vị..." class="px-3 py-1.5 text-xs border border-slate-300 rounded-xl">
-                        </div>
+                    <div class="flex items-center justify-between pb-4 mb-4 border-b flex-wrap gap-2">
+                        <h2 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-users text-tkd-red"></i> Danh Sách Đăng Ký</h2>
+                        <input type="text" id="searchAthleteKey" oninput="renderAthletesTable()" placeholder="Tìm kiếm VĐV/Đơn vị..." class="px-3 py-1.5 text-xs border rounded-xl">
                     </div>
-
                     <div class="overflow-x-auto flex-grow max-h-[500px]">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-slate-50 text-slate-600 text-xs uppercase font-bold sticky top-0 z-10 border-b border-slate-200">
+                                <tr class="bg-slate-50 text-slate-600 text-xs uppercase font-bold sticky top-0 border-b">
                                     <th class="p-3">#</th>
-                                    <th class="p-3">Họ và Tên VĐV / Đội</th>
-                                    <th class="p-3">Đơn Vị / CLB</th>
+                                    <th class="p-3">Họ và Tên VĐV</th>
+                                    <th class="p-3">Đơn Vị</th>
                                     <th class="p-3">Nội Dung</th>
-                                    <th class="p-3">Hình Thức</th>
-                                    <th class="p-3">Chi Tiết / Hạng Cân</th>
+                                    <th class="p-3">Lứa Tuổi</th>
+                                    <th class="p-3">Hạng Cân</th>
                                     <th class="p-3 text-right">Thao Tác</th>
                                 </tr>
                             </thead>
-                            <tbody id="athletesTableBody" class="divide-y divide-slate-100 text-xs font-medium"></tbody>
+                            <tbody id="athletesTableBody" class="divide-y text-xs font-medium"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- ================= TAB 2: SƠ ĐỒ THI ĐẤU ================= -->
+        <!-- TAB 2: SƠ ĐỒ NHÁNH ĐẤU CHUẨN IN -->
         <section id="view-bracket" class="tab-content hidden space-y-6">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div>
-                        <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-sitemap text-tkd-blue"></i> Sơ Đồ Nhánh & Trận Đấu
-                        </h2>
-                        <p class="text-xs text-slate-500">Xem trực quan nhánh đấu, mã số trận và nhập tỷ số cho từng vòng.</p>
-                    </div>
-
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <select id="bracketGender" onchange="updateBracketWeightOptions(); renderBracketDisplay();" class="px-3 py-1.5 text-xs font-bold border border-slate-300 rounded-xl">
-                            <option value="Nam">Nam</option>
-                            <option value="Nữ">Nữ</option>
-                        </select>
-                        <select id="bracketWeightClass" onchange="renderBracketDisplay()" class="px-3 py-1.5 text-xs font-bold border border-slate-300 rounded-xl"></select>
-                        <button onclick="generateSingleBracket()" class="admin-only bg-tkd-blue hover:bg-blue-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5">
-                            <i class="fa-solid fa-shuffle"></i> Bốc Thăm Hạng Này
-                        </button>
-                    </div>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4 no-print">
+                <div>
+                    <h2 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-sitemap text-tkd-blue"></i> Sơ Đồ Nhánh Đấu Chuẩn Quốc Tế (Từ Ngoài Vào Trong)</h2>
+                    <p class="text-xs text-slate-500">Vòng 1 ở ngoài biên, tiến dần vào trong qua các vòng và hội tụ tại Chung kết ở trung tâm.</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <select id="bracketGender" onchange="updateBracketWeightOptions(); renderBracketDisplay();" class="px-3 py-1.5 text-xs font-bold border rounded-xl">
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                    </select>
+                    <select id="bracketAgeGroup" onchange="renderBracketDisplay()" class="px-3 py-1.5 text-xs font-bold border rounded-xl text-blue-700 bg-blue-50">
+                        <option value="Lứa tuổi 1">Lứa tuổi 1</option>
+                        <option value="Lứa tuổi 2">Lứa tuổi 2</option>
+                        <option value="Lứa tuổi 3">Lứa tuổi 3</option>
+                        <option value="Lứa tuổi 4">Lứa tuổi 4</option>
+                    </select>
+                    <select id="bracketWeightClass" onchange="renderBracketDisplay()" class="px-3 py-1.5 text-xs font-bold border rounded-xl"></select>
+                    <button onclick="generateSingleBracket()" class="admin-only bg-tkd-blue hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-xl transition">
+                        <i class="fa-solid fa-shuffle"></i> Bốc Thăm Hạng Này
+                    </button>
+                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow">
+                        <i class="fa-solid fa-print"></i> In / Tải PDF Sơ Đồ
+                    </button>
                 </div>
             </div>
 
-            <!-- Bracket Canvas -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
-                <div class="mb-6 pb-4 border-b border-slate-200 flex justify-between items-center">
-                    <div>
-                        <span class="text-xs font-extrabold px-3 py-1 bg-tkd-blue/10 text-tkd-blue rounded-full uppercase" id="bracketTag">ĐỐI KHÁNG - NAM</span>
-                        <h3 class="text-xl font-black text-slate-800 mt-1" id="bracketTitle">HẠNG CÂN</h3>
+            <!-- Khung In Sơ Đồ -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-300 print-container space-y-6">
+                <div class="text-center border-b pb-4 space-y-1">
+                    <h1 id="printTournamentTitle" class="text-lg font-black uppercase text-slate-900 tracking-wider">GIẢI ĐẤU TAEKWONDO</h1>
+                    <p id="printTournamentDate" class="text-xs font-bold text-slate-600">Ngày in</p>
+                    <div class="inline-block bg-slate-900 text-yellow-400 font-extrabold text-xs px-4 py-1 rounded-full uppercase mt-2" id="printCategoryHeader">
+                        NAM - LỨA TUỔI 1 - HẠNG CÂN: -58kg
                     </div>
                 </div>
-                <div id="bracketTree" class="min-w-[750px] py-4 flex items-stretch justify-start space-x-12"></div>
+
+                <!-- Cấu trúc các cột: Vòng 1 ngoài cùng -> Vòng trong -> Chung kết ở giữa -->
+                <div id="horizontalGridBracketContainer" class="min-w-[1050px] py-6 flex items-center justify-between gap-4 overflow-x-auto">
+                    <!-- Rendered by JS -->
+                </div>
+
+                <!-- Bảng Classification -->
+                <div class="max-w-md mx-auto pt-6 border-t">
+                    <div class="text-center font-black text-xs uppercase bg-slate-100 py-1.5 border border-slate-300">Classification (Xếp Hạng)</div>
+                    <div class="border-x border-b border-slate-300 divide-y divide-slate-300 text-xs font-medium">
+                        <div class="p-2 flex items-center gap-3"><span class="font-bold w-6 text-center">1</span><span id="classGold" class="text-slate-800 font-bold"></span></div>
+                        <div class="p-2 flex items-center gap-3"><span class="font-bold w-6 text-center">2</span><span id="classSilver" class="text-slate-800 font-bold"></span></div>
+                        <div class="p-2 flex items-center gap-3"><span class="font-bold w-6 text-center">3</span><span id="classBronze1" class="text-slate-800 font-bold"></span></div>
+                        <div class="p-2 flex items-center gap-3"><span class="font-bold w-6 text-center">3</span><span id="classBronze2" class="text-slate-800 font-bold"></span></div>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- ================= TAB 3: DANH SÁCH TRẬN (XANH / ĐỎ) ================= -->
+        <!-- TAB 3: SẮP XẾP & DANH SÁCH TRẬN TOÀN GIẢI -->
         <section id="view-matchlist" class="tab-content hidden space-y-6">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
                 <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                     <div>
-                        <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-list-check text-tkd-red"></i> Tổng Hợp Danh Sách Trận Đấu (Xanh & Đỏ)
-                        </h2>
-                        <p class="text-xs text-slate-500">Danh sách các trận đấu được tổng hợp toàn giải để dễ dàng theo dõi theo phân màu Hồng (Đỏ) và Cheong (Xanh).</p>
+                        <h2 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-list-check text-tkd-red"></i> Phân Bổ & Sắp Xếp Số Trận Toàn Giải</h2>
+                        <p class="text-xs text-slate-500">Hệ thống đánh số thứ tự trận đấu khi các cặp đấu có đầy đủ tên vận động viên.</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <select id="filterMatchWeight" onchange="renderMasterMatchList()" class="px-3 py-1.5 text-xs border border-slate-300 rounded-xl font-bold">
-                            <option value="ALL">Tất cả hạng cân</option>
-                        </select>
+                        <button onclick="autoScheduleAllMatches()" class="admin-only bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl shadow transition flex items-center gap-2">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Tự Động Phân Bổ & Đánh Số Trận Hợp Lý
+                        </button>
+                        <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow">
+                            <i class="fa-solid fa-print"></i> In / Tải PDF Danh Sách Trận
+                        </button>
                     </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border text-xs">
+                    <span class="font-bold text-slate-700">Lọc xem theo hạng/lứa tuổi:</span>
+                    <select id="filterMatchWeight" onchange="renderMasterMatchList()" class="px-3 py-1.5 border rounded-lg font-bold">
+                        <option value="ALL">Tất cả toàn giải</option>
+                    </select>
                 </div>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-extrabold border-b border-slate-300">
-                                <th class="p-3 text-center">Mã Trận</th>
-                                <th class="p-3">Hạng Cân / Giới Tính</th>
+                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-extrabold border-b">
+                                <th class="p-3 text-center w-20">Số Trận</th>
+                                <th class="p-3">Hạng Cân & Lứa Tuổi</th>
                                 <th class="p-3">Vòng Đấu</th>
-                                <th class="p-3 text-red-600 bg-red-50/50"><i class="fa-solid fa-square text-red-600"></i> Đỏ (Hong)</th>
-                                <th class="p-3 text-blue-600 bg-blue-50/50"><i class="fa-solid fa-square text-blue-600"></i> Xanh (Cheong)</th>
+                                <th class="p-3 text-red-600 bg-red-50/50"><i class="fa-solid fa-square"></i> Đỏ (Hong)</th>
+                                <th class="p-3 text-blue-600 bg-blue-50/50"><i class="fa-solid fa-square"></i> Xanh (Cheong)</th>
                                 <th class="p-3 text-center">Tỷ Số</th>
-                                <th class="p-3 text-center">Trạng Thái / Thắng</th>
+                                <th class="p-3 text-center">Kết Quả Thắng</th>
                                 <th class="p-3 text-right admin-only">Thao Tác</th>
                             </tr>
                         </thead>
-                        <tbody id="masterMatchListBody" class="divide-y divide-slate-100 text-xs font-semibold"></tbody>
+                        <tbody id="masterMatchListBody" class="divide-y text-xs font-semibold"></tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- ================= TAB 4: BẢNG HUY CHƯƠNG ================= -->
+        <!-- TAB 4: BẢNG HUY CHƯƠNG TOÀN ĐOÀN -->
         <section id="view-medals" class="tab-content hidden space-y-6">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2 mb-1">
-                    <i class="fa-solid fa-award text-yellow-500 text-xl"></i> Bảng Tổng Hợp Huy Chương Toàn Đoàn
-                </h2>
-                <p class="text-xs text-slate-500 mb-4">Huy chương được hệ thống tự động tổng hợp dựa trên kết quả trận chung kết và bán kết của các hạng cân.</p>
-                <div class="overflow-x-auto">
+                <h2 class="font-bold text-lg text-slate-800 mb-1"><i class="fa-solid fa-award text-yellow-500 text-xl"></i> Bảng Tổng Hợp Huy Chương Toàn Đoàn</h2>
+                <div class="overflow-x-auto mt-4">
                     <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-extrabold border-b border-slate-300">
+                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-extrabold border-b">
                                 <th class="p-3.5 text-center w-16">Hạng</th>
                                 <th class="p-3.5">Đơn Vị / CLB</th>
                                 <th class="p-3.5 text-center text-yellow-600">Vàng</th>
@@ -329,37 +340,30 @@
                                 <th class="p-3.5 text-center font-black">Tổng</th>
                             </tr>
                         </thead>
-                        <tbody id="medalTallyBody" class="divide-y divide-slate-100 text-sm font-semibold"></tbody>
+                        <tbody id="medalTallyBody" class="divide-y text-sm font-semibold"></tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- ================= TAB 5: CẤU HÌNH HẠNG CÂN (ADMIN ONLY) ================= -->
+        <!-- TAB 5: CẤU HÌNH HẠNG CÂN -->
         <section id="view-config" class="tab-content hidden space-y-6 admin-only">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-sliders text-tkd-blue"></i> Cấu Hình & Tùy Chỉnh Hạng Cân Đối Kháng
-                </h2>
-                <p class="text-xs text-slate-500">Admin có thể thêm, bớt hoặc chỉnh sửa các hạng cân đối kháng linh động theo điều lệ giải đấu thực tế.</p>
-
+                <h2 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-sliders text-tkd-blue"></i> Cấu Hình Hạng Cân Đối Kháng</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    <!-- Hạng cân Nam -->
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                        <h3 class="font-bold text-sm text-blue-700 flex items-center gap-2"><i class="fa-solid fa-mars"></i> Hạng Cân Nam</h3>
+                    <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
+                        <h3 class="font-bold text-sm text-blue-700"><i class="fa-solid fa-mars"></i> Hạng Cân Nam</h3>
                         <div class="flex gap-2">
-                            <input type="text" id="newWeightNam" placeholder="Ví dụ: -51 kg" class="flex-grow px-3 py-1.5 text-xs border rounded-lg">
-                            <button onclick="addWeightClassCustom('Nam')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Thêm Hạng Nam</button>
+                            <input type="text" id="newWeightNam" placeholder="-51 kg" class="flex-grow px-3 py-1.5 text-xs border rounded-lg">
+                            <button onclick="addWeightClassCustom('Nam')" class="bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Thêm</button>
                         </div>
                         <div id="listWeightNam" class="flex flex-wrap gap-2 pt-2"></div>
                     </div>
-
-                    <!-- Hạng cân Nữ -->
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-                        <h3 class="font-bold text-sm text-pink-700 flex items-center gap-2"><i class="fa-solid fa-venus"></i> Hạng Cân Nữ</h3>
+                    <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
+                        <h3 class="font-bold text-sm text-pink-700"><i class="fa-solid fa-venus"></i> Hạng Cân Nữ</h3>
                         <div class="flex gap-2">
-                            <input type="text" id="newWeightNu" placeholder="Ví dụ: -42 kg" class="flex-grow px-3 py-1.5 text-xs border rounded-lg">
-                            <button onclick="addWeightClassCustom('Nữ')" class="bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Thêm Hạng Nữ</button>
+                            <input type="text" id="newWeightNu" placeholder="-42 kg" class="flex-grow px-3 py-1.5 text-xs border rounded-lg">
+                            <button onclick="addWeightClassCustom('Nữ')" class="bg-pink-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg">Thêm</button>
                         </div>
                         <div id="listWeightNu" class="flex flex-wrap gap-2 pt-2"></div>
                     </div>
@@ -367,29 +371,24 @@
             </div>
         </section>
 
-        <!-- ================= TAB 6: QUẢN LÝ LINK ĐƠN VỊ (ADMIN ONLY) ================= -->
+        <!-- TAB 6: QUẢN LÝ LINK ĐƠN VỊ -->
         <section id="view-links" class="tab-content hidden space-y-6 admin-only">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
-                    <i class="fa-solid fa-link text-tkd-blue"></i> Tạo & Quản Lý Link Đăng Ký Riêng Cho Từng Đơn Vị
-                </h2>
-                <p class="text-xs text-slate-500">Mỗi đơn vị sẽ có một đường link riêng biệt[cite: 2]. Các đơn vị đăng ký xong có thể tải file gửi về cho Admin để nạp vào hệ thống.</p>
-
+                <h2 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-link text-tkd-blue"></i> Quản Lý Link Đăng Ký Riêng Từng Đơn Vị</h2>
                 <div class="flex gap-2 max-w-md">
-                    <input type="text" id="newUnitNameInput" placeholder="Nhập tên đơn vị mới (Ví dụ: Đơn vị A)..." class="flex-grow px-3 py-2 text-sm border border-slate-300 rounded-xl">
+                    <input type="text" id="newUnitNameInput" placeholder="Tên đơn vị mới..." class="flex-grow px-3 py-2 text-sm border rounded-xl">
                     <button onclick="generateUnitLink()" class="bg-tkd-blue text-white text-xs font-bold px-4 py-2 rounded-xl">Tạo Link</button>
                 </div>
-
                 <div class="overflow-x-auto mt-4">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
-                            <tr class="bg-slate-50 text-slate-600 uppercase border-b border-slate-200">
+                            <tr class="bg-slate-50 text-slate-600 uppercase border-b">
                                 <th class="p-3">Tên Đơn Vị</th>
-                                <th class="p-3">Đường Dẫn Riêng (Gửi cho đơn vị)</th>
+                                <th class="p-3">Đường Dẫn Riêng</th>
                                 <th class="p-3 text-right">Thao tác</th>
                             </tr>
                         </thead>
-                        <tbody id="unitsLinkTableBody" class="divide-y divide-slate-100"></tbody>
+                        <tbody id="unitsLinkTableBody" class="divide-y"></tbody>
                     </table>
                 </div>
             </div>
@@ -397,7 +396,7 @@
 
     </main>
 
-    <!-- MATCH INPUT MODAL (Admin Only) -->
+    <!-- MATCH INPUT MODAL -->
     <div id="matchModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
             <div class="bg-slate-900 text-white px-5 py-3.5 flex justify-between items-center">
@@ -410,50 +409,41 @@
                     <div class="bg-red-50 p-3 rounded-xl text-center border border-red-200">
                         <span class="text-[10px] font-extrabold text-red-600 uppercase"><i class="fa-solid fa-square"></i> ĐỎ (HONG)</span>
                         <h4 id="modalRedName" class="font-bold text-xs mt-1 text-slate-800"></h4>
-                        <input type="number" id="modalRedScore" min="0" value="0" class="w-full text-center mt-2 font-black text-lg border border-red-300 rounded bg-white">
+                        <input type="number" id="modalRedScore" min="0" value="0" class="w-full text-center mt-2 font-black text-lg border rounded bg-white">
                     </div>
                     <div class="bg-blue-50 p-3 rounded-xl text-center border border-blue-200">
                         <span class="text-[10px] font-extrabold text-blue-600 uppercase"><i class="fa-solid fa-square"></i> XANH (CHEONG)</span>
                         <h4 id="modalBlueName" class="font-bold text-xs mt-1 text-slate-800"></h4>
-                        <input type="number" id="modalBlueScore" min="0" value="0" class="w-full text-center mt-2 font-black text-lg border border-blue-300 rounded bg-white">
+                        <input type="number" id="modalBlueScore" min="0" value="0" class="w-full text-center mt-2 font-black text-lg border rounded bg-white">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold mb-1 uppercase text-slate-600">VĐV Chiến Thắng *</label>
+                    <label class="block text-xs font-bold mb-1 uppercase text-slate-600">VĐV Thắng Cuộc *</label>
                     <select id="modalWinner" required class="w-full px-3 py-2 text-xs border rounded-xl font-bold bg-slate-50">
                         <option value="">-- Chọn người thắng --</option>
                         <option value="red">VĐV Đỏ</option>
                         <option value="blue">VĐV Xanh</option>
                     </select>
                 </div>
-                <div class="flex gap-2 pt-2">
-                    <button type="submit" class="w-full bg-tkd-blue hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-xl transition">Lưu Kết Quả & Đôn Vòng</button>
-                </div>
+                <button type="submit" class="w-full bg-tkd-blue hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-xl transition">Lưu Kết Quả & Đôn Vòng</button>
             </form>
         </div>
     </div>
 
     <script>
-        // --- QUẢN LÝ MÃ GIẢI ĐẤU ĐỘNG ---
         let tournamentCode = localStorage.getItem('tkd_spa_tournamentCode') || 'Giai_TKD_2026';
-        
-        function getStorageKey(key) {
-            return `${tournamentCode}_${key}`;
-        }
+        function getStorageKey(key) { return `${tournamentCode}_${key}`; }
 
         function saveTournamentCode() {
-            const inputVal = document.getElementById('tournamentCodeInput').value.trim();
-            if(!inputVal) return alert('Mã giải không được để trống!');
-            tournamentCode = inputVal.replace(/\s+/g, '_');
+            const val = document.getElementById('tournamentCodeInput').value.trim();
+            if(!val) return alert('Tên giải không được để trống!');
+            tournamentCode = val.replace(/\s+/g, '_');
             localStorage.setItem('tkd_spa_tournamentCode', tournamentCode);
-            showToast('Đã đổi sang mã giải: ' + tournamentCode);
-            location.reload(); // Tải lại để load dữ liệu đúng theo mã giải mới
+            showToast('Đã đổi giải: ' + tournamentCode);
+            location.reload();
         }
 
-        const SUB_CATEGORIES = {
-            "Đối kháng": ["Đơn", "Đồng đội"],
-            "Quyền": ["Đơn", "Đôi", "Đồng đội"]
-        };
+        const SUB_CATEGORIES = { "Đối kháng": ["Đơn", "Đồng đội"], "Quyền": ["Đơn", "Đôi", "Đồng đội"] };
 
         let weightClasses = JSON.parse(localStorage.getItem(getStorageKey('weightClasses'))) || {
             "Nam": ["-54 kg", "-58 kg", "-63 kg", "-68 kg", "-74 kg", "-80 kg", "-87 kg", "+87 kg"],
@@ -472,6 +462,8 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('tournamentCodeInput').value = tournamentCode;
+            document.getElementById('printTournamentTitle').innerText = `GIẢI ĐẤU TAEKWONDO: ${tournamentCode.toUpperCase()}`;
+            document.getElementById('printTournamentDate').innerText = `Ngày in: ${new Date().toLocaleDateString('vi-VN')}`;
             checkDeadlineStatus();
             applyRolePermissions();
             onCategoryTypeChange();
@@ -482,76 +474,53 @@
             renderMedalTally();
             renderUnitsLinkTable();
             renderWeightConfigUI();
-
-            if (registrationDeadline) {
-                document.getElementById('deadlineInput').value = registrationDeadline;
-            }
+            if(registrationDeadline) document.getElementById('deadlineInput').value = registrationDeadline;
             updateDeadlineUI();
         });
 
-        // Hạn chót & Kiểm tra trạng thái
         function confirmDeadline() {
             const val = document.getElementById('deadlineInput').value;
-            if(!val) return alert('Vui lòng chọn thời gian hạn chót!');
+            if(!val) return alert('Chọn hạn chót!');
             registrationDeadline = val;
             localStorage.setItem(getStorageKey('deadline'), registrationDeadline);
             checkDeadlineStatus();
             updateDeadlineUI();
-            showToast('Đã xác nhận thời gian hạn chót!');
+            showToast('Đã lưu hạn chót!');
         }
 
         function checkDeadlineStatus() {
-            if (registrationDeadline) {
-                const now = new Date();
-                const deadlineDate = new Date(registrationDeadline);
-                if (now > deadlineDate) {
-                    isLocked = true;
-                }
-            }
+            if (registrationDeadline && new Date() > new Date(registrationDeadline)) isLocked = true;
         }
 
         function updateDeadlineUI() {
             const noticeText = document.getElementById('deadlineNoticeText');
             const lockedDiv = document.getElementById('lockedWarning');
-            const formCard = document.getElementById('registrationFormCard');
-
             if (registrationDeadline) {
                 const d = new Date(registrationDeadline);
-                const formattedTime = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} ngày ${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
-                noticeText.innerText = `Cổng đăng ký sẽ tự động đóng vào lúc: ${formattedTime}`;
-            } else {
-                noticeText.innerText = `Chưa thiết lập hạn chót đăng ký[cite: 2].`;
+                noticeText.innerText = `Cổng đóng lúc: ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} ngày ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
             }
-
             if (isLocked) {
                 lockedDiv.classList.remove('hidden');
-                if(!isAdmin) {
-                    formCard.classList.add('hidden');
-                }
+                if(!isAdmin) document.getElementById('registrationFormCard').classList.add('hidden');
             } else {
                 lockedDiv.classList.add('hidden');
-                formCard.classList.remove('hidden');
+                document.getElementById('registrationFormCard').classList.remove('hidden');
             }
         }
 
         function applyRolePermissions() {
             if (!isAdmin) {
                 document.getElementById('roleBadge').innerText = `Đơn vị: ${clientUnit}`;
-                document.getElementById('subHeaderDesc').innerText = `Cổng đăng ký vận động viên riêng của đoàn ${clientUnit}`;
+                document.getElementById('subHeaderDesc').innerText = `Cổng đăng ký của ${clientUnit}`;
                 document.getElementById('tournamentCodeInput').setAttribute('readonly', true);
                 document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
                 document.getElementById('adminGlobalControls').classList.add('hidden');
                 document.getElementById('exportActionForClient').classList.remove('hidden');
-                
-                const unitInput = document.getElementById('unit');
-                unitInput.value = clientUnit;
-                unitInput.readOnly = true;
-                unitInput.classList.add('bg-slate-100', 'cursor-not-allowed');
-            } else {
-                if (isLocked) {
-                    document.getElementById('lockBtn').innerHTML = `<i class="fa-solid fa-lock"></i> Đã Khóa Đăng Ký`;
-                    document.getElementById('lockBtn').className = "bg-red-600 hover:bg-red-700 text-xs font-bold text-white py-2 px-3 rounded-xl transition flex items-center gap-1.5";
-                }
+                const uInput = document.getElementById('unit');
+                uInput.value = clientUnit; uInput.readOnly = true;
+            } else if (isLocked) {
+                document.getElementById('lockBtn').innerHTML = `<i class="fa-solid fa-lock"></i> Đã Khóa Đăng Ký`;
+                document.getElementById('lockBtn').className = "bg-red-600 text-white text-xs font-bold py-2 px-3 rounded-xl";
             }
         }
 
@@ -584,331 +553,353 @@
         }
 
         function onCategoryTypeChange() {
-            const categoryType = document.getElementById('categoryType').value;
-            const subSelect = document.getElementById('subCategory');
-            const weightWrapper = document.getElementById('weightClassWrapper');
-
-            const subOptions = SUB_CATEGORIES[categoryType] || [];
-            subSelect.innerHTML = subOptions.map(s => `<option value="${s}">${s}</option>`).join('');
-
-            if (categoryType === 'Quyền') {
-                weightWrapper.classList.add('hidden');
-                document.getElementById('weightClass').removeAttribute('required');
-            } else {
-                weightWrapper.classList.remove('hidden');
-                document.getElementById('weightClass').setAttribute('required', 'required');
-                updateWeightOptions();
-            }
+            const type = document.getElementById('categoryType').value;
+            const sub = document.getElementById('subCategory');
+            const wWrapper = document.getElementById('weightClassWrapper');
+            sub.innerHTML = (SUB_CATEGORIES[type] || []).map(s => `<option value="${s}">${s}</option>`).join('');
+            if (type === 'Quyền') { wWrapper.classList.add('hidden'); document.getElementById('weightClass').removeAttribute('required'); }
+            else { wWrapper.classList.remove('hidden'); document.getElementById('weightClass').setAttribute('required', 'required'); updateWeightOptions(); }
         }
 
         function updateWeightOptions() {
-            const gender = document.getElementById('gender').value;
-            const select = document.getElementById('weightClass');
-            const list = weightClasses[gender] || weightClasses["Nam"] || [];
-            select.innerHTML = list.map(w => `<option value="${w}">${w}</option>`).join('');
+            const g = document.getElementById('gender').value;
+            document.getElementById('weightClass').innerHTML = (weightClasses[g] || weightClasses["Nam"]).map(w => `<option value="${w}">${w}</option>`).join('');
         }
 
         function updateBracketWeightOptions() {
-            const gender = document.getElementById('bracketGender').value;
-            const select = document.getElementById('bracketWeightClass');
-            const list = weightClasses[gender] || [];
-            select.innerHTML = list.map(w => `<option value="${w}">${w}</option>`).join('');
+            const g = document.getElementById('bracketGender').value;
+            document.getElementById('bracketWeightClass').innerHTML = (weightClasses[g] || []).map(w => `<option value="${w}">${w}</option>`).join('');
             
-            const filterSelect = document.getElementById('filterMatchWeight');
-            if(filterSelect) {
-                const currentVal = filterSelect.value;
-                let opts = `<option value="ALL">Tất cả hạng cân</option>`;
-                ["Nam", "Nữ"].forEach(g => {
-                    (weightClasses[g] || []).forEach(w => {
-                        opts += `<option value="${g}_${w}">[${g}] ${w}</option>`;
+            const fSel = document.getElementById('filterMatchWeight');
+            if(fSel) {
+                let opts = `<option value="ALL">Tất cả toàn giải</option>`;
+                ["Nam", "Nữ"].forEach(sex => {
+                    ["Lứa tuổi 1", "Lứa tuổi 2", "Lứa tuổi 3", "Lứa tuổi 4"].forEach(age => {
+                        (weightClasses[sex] || []).forEach(w => {
+                            opts += `<option value="${sex}_${age}_${w}">[${sex} - ${age}] ${w}</option>`;
+                        });
                     });
                 });
-                filterSelect.innerHTML = opts;
-                filterSelect.value = currentVal;
+                fSel.innerHTML = opts;
             }
         }
 
-        // --- CẤU HÌNH HẠNG CÂN ---
         function renderWeightConfigUI() {
-            ['Nam', 'Nữ'].forEach(gender => {
-                const containerId = gender === 'Nam' ? 'listWeightNam' : 'listWeightNu';
-                const el = document.getElementById(containerId);
-                if(!el) return;
-                const list = weightClasses[gender] || [];
-                el.innerHTML = list.map(w => `
-                    <span class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 shadow-sm">
-                        ${w}
-                        <button onclick="removeWeightClass('${gender}', '${w}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-xmark"></i></button>
-                    </span>
-                `).join('');
+            ['Nam', 'Nữ'].forEach(g => {
+                const el = document.getElementById(g === 'Nam' ? 'listWeightNam' : 'listWeightNu');
+                if(el) el.innerHTML = (weightClasses[g] || []).map(w => `<span class="inline-flex items-center gap-1 bg-white px-2.5 py-1 rounded border text-xs font-bold">${w} <button onclick="removeWeightClass('${g}','${w}')" class="text-red-500"><i class="fa-solid fa-xmark"></i></button></span>`).join('');
             });
+            updateWeightOptions(); updateBracketWeightOptions();
         }
 
-        function addWeightClassCustom(gender) {
-            const inputId = gender === 'Nam' ? 'newWeightNam' : 'newWeightNu';
-            const val = document.getElementById(inputId).value.trim();
-            if(!val) return alert('Vui lòng nhập tên hạng cân!');
-            if(!weightClasses[gender].includes(val)) {
-                weightClasses[gender].push(val);
-                document.getElementById(inputId).value = '';
-                saveData();
-                showToast(`Đã thêm hạng cân ${val} (${gender})!`);
-            } else {
-                alert('Hạng cân này đã tồn tại!');
-            }
+        function addWeightClassCustom(g) {
+            const inp = document.getElementById(g === 'Nam' ? 'newWeightNam' : 'newWeightNu');
+            const val = inp.value.trim();
+            if(!val) return alert('Nhập tên hạng cân!');
+            if(!weightClasses[g].includes(val)) { weightClasses[g].push(val); inp.value=''; saveData(); showToast('Đã thêm!'); }
         }
 
-        function removeWeightClass(gender, wName) {
-            if(confirm(`Xóa hạng cân ${wName}?`)) {
-                weightClasses[gender] = weightClasses[gender].filter(w => w !== wName);
-                saveData();
-                showToast('Đã xóa hạng cân!');
-            }
+        function removeWeightClass(g, w) {
+            if(confirm(`Xóa ${w}?`)) { weightClasses[g] = weightClasses[g].filter(x => x !== w); saveData(); showToast('Đã xóa!'); }
         }
 
-        // --- ĐĂNG KÝ VĐV ---
         function handleSaveAthlete(e) {
             e.preventDefault();
-            checkDeadlineStatus();
-            if (isLocked && !isAdmin) {
-                alert('Cổng đăng ký đã bị khóa hoặc hết hạn[cite: 2]!');
-                return;
-            }
-
+            if (isLocked && !isAdmin) return alert('Đã khóa!');
             const id = document.getElementById('athleteId').value || ('VDV-' + Date.now().toString().substr(-6));
             const fullName = document.getElementById('fullName').value.trim();
             const unit = isAdmin ? document.getElementById('unit').value.trim() : clientUnit;
             const categoryType = document.getElementById('categoryType').value;
             const subCategory = document.getElementById('subCategory').value;
             const gender = document.getElementById('gender').value;
+            const ageGroup = document.getElementById('ageGroup').value;
             const weightClass = categoryType === 'Quyền' ? 'N/A' : document.getElementById('weightClass').value;
 
-            const existingIdx = athletes.findIndex(a => a.id === id);
-            if (existingIdx !== -1) {
-                athletes[existingIdx] = { id, fullName, unit, categoryType, subCategory, gender, weightClass };
-                showToast('Đã cập nhật thông tin!');
-            } else {
-                athletes.push({ id, fullName, unit, categoryType, subCategory, gender, weightClass });
-                if (!unitsList.includes(unit)) unitsList.push(unit);
-                showToast('Đăng ký VĐV thành công!');
-            }
-
-            saveData();
-            document.getElementById('athleteForm').reset();
+            const idx = athletes.findIndex(a => a.id === id);
+            if (idx !== -1) athletes[idx] = { id, fullName, unit, categoryType, subCategory, gender, ageGroup, weightClass };
+            else { athletes.push({ id, fullName, unit, categoryType, subCategory, gender, ageGroup, weightClass }); if(!unitsList.includes(unit)) unitsList.push(unit); }
+            saveData(); document.getElementById('athleteForm').reset();
             if(!isAdmin) document.getElementById('unit').value = clientUnit;
-            document.getElementById('athleteId').value = '';
-            onCategoryTypeChange();
+            document.getElementById('athleteId').value = ''; onCategoryTypeChange();
+            showToast('Lưu VĐV thành công!');
         }
 
         function editAthlete(id) {
-            if (isLocked && !isAdmin) return alert('Cổng đăng ký đã khóa[cite: 2]!');
             const item = athletes.find(a => a.id === id);
-            if (!item) return;
+            if(!item) return;
             document.getElementById('athleteId').value = item.id;
             document.getElementById('fullName').value = item.fullName;
-            if (isAdmin) document.getElementById('unit').value = item.unit;
+            if(isAdmin) document.getElementById('unit').value = item.unit;
             document.getElementById('categoryType').value = item.categoryType || 'Đối kháng';
             onCategoryTypeChange();
             document.getElementById('subCategory').value = item.subCategory || 'Đơn';
             document.getElementById('gender').value = item.gender;
-            if(item.categoryType !== 'Quyền') {
-                updateWeightOptions();
-                document.getElementById('weightClass').value = item.weightClass;
-            }
-            window.scrollTo({top: 0, behavior: 'smooth'});
+            document.getElementById('ageGroup').value = item.ageGroup || 'Lứa tuổi 1';
+            if(item.categoryType !== 'Quyền') { updateWeightOptions(); document.getElementById('weightClass').value = item.weightClass; }
+            window.scrollTo({top:0, behavior:'smooth'});
         }
 
         function deleteAthlete(id) {
-            if (isLocked && !isAdmin) return alert('Cổng đăng ký đã khóa[cite: 2]!');
-            const item = athletes.find(a => a.id === id);
-            if (!item) return;
-            if (!isAdmin && item.unit !== clientUnit) return alert('Bạn không thể xóa VĐV đoàn khác[cite: 2]!');
-            if (confirm('Xóa thông tin này?')) {
-                athletes = athletes.filter(a => a.id !== id);
-                saveData();
-                showToast('Đã xóa!');
-            }
+            if(confirm('Xóa VĐV này?')) { athletes = athletes.filter(a => a.id !== id); saveData(); showToast('Đã xóa!'); }
         }
 
         function renderAthletesTable() {
-            const tbody = document.getElementById('athletesTableBody');
             document.getElementById('navCountAthletes').innerText = athletes.length;
-            const searchKey = (document.getElementById('searchAthleteKey')?.value || '').toLowerCase();
-
-            const filtered = athletes.filter(a => 
-                a.fullName.toLowerCase().includes(searchKey) || 
-                a.unit.toLowerCase().includes(searchKey) ||
-                (a.categoryType && a.categoryType.toLowerCase().includes(searchKey))
-            );
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Chưa có dữ liệu.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = filtered.map((a, idx) => `
-                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                    <td class="p-3 text-slate-400 font-semibold">${idx + 1}</td>
+            const key = (document.getElementById('searchAthleteKey')?.value || '').toLowerCase();
+            const filtered = athletes.filter(a => a.fullName.toLowerCase().includes(key) || a.unit.toLowerCase().includes(key));
+            const tbody = document.getElementById('athletesTableBody');
+            if(filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Chưa có VĐV nào.</td></tr>`; return; }
+            tbody.innerHTML = filtered.map((a, i) => `
+                <tr class="hover:bg-slate-50 border-b">
+                    <td class="p-3 text-slate-400 font-semibold">${i+1}</td>
                     <td class="p-3 font-bold text-slate-800">${a.fullName}</td>
                     <td class="p-3 text-tkd-blue font-semibold">${a.unit}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 text-[10px] font-bold rounded ${a.categoryType === 'Quyền' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}">${a.categoryType || 'Đối kháng'}</span></td>
-                    <td class="p-3 font-semibold text-slate-700">${a.subCategory || 'Đơn'}</td>
-                    <td class="p-3 font-bold">${a.categoryType === 'Quyền' ? `[${a.gender}]` : `${a.gender} - ${a.weightClass}`}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 text-[10px] font-bold rounded bg-orange-100 text-orange-700">${a.categoryType}</span></td>
+                    <td class="p-3 font-bold text-blue-700">${a.ageGroup || 'Lứa tuổi 1'}</td>
+                    <td class="p-3 font-bold">${a.gender} - ${a.weightClass}</td>
                     <td class="p-3 text-right space-x-1">
-                        ${(isAdmin || (!isLocked && a.unit === clientUnit)) ? `
-                            <button onclick="editAthlete('${a.id}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Sửa"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteAthlete('${a.id}')" class="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Xóa"><i class="fa-solid fa-trash"></i></button>
-                        ` : '<span class="text-slate-400 text-[10px] italic">Đã khóa[cite: 2]</span>'}
+                        <button onclick="editAthlete('${a.id}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteAthlete('${a.id}')" class="p-1.5 text-red-600 hover:bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // --- XUẤT & NHẬP FILE DỮ LIỆU ĐĂNG KÝ ONLINE ---
         function exportUnitData() {
-            let dataToExport = athletes;
-            if(clientUnit) {
-                dataToExport = athletes.filter(a => a.unit === clientUnit);
-            }
-            if(dataToExport.length === 0) return alert('Chưa có VĐV nào trong danh sách để xuất file!');
-
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `DanhSach_DangKy_${clientUnit || 'Tong'}_${tournamentCode}.json`);
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(clientUnit ? athletes.filter(a => a.unit === clientUnit) : athletes, null, 2));
+            const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", `DangKy_${clientUnit || 'Tong'}.json`);
+            document.body.appendChild(dl); dl.click(); dl.remove();
         }
 
-        function importAthleteData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedAthletes = JSON.parse(e.target.result);
-                    if(!Array.isArray(importedAthletes)) throw new Error('Cấu trúc file không đúng!');
-
-                    let addedCount = 0;
-                    importedAthletes.forEach(imp => {
-                        if(!athletes.some(a => a.id === imp.id)) {
-                            athletes.push(imp);
-                            if(imp.unit && !unitsList.includes(imp.unit)) unitsList.push(imp.unit);
-                            addedCount++;
-                        }
-                    });
-
-                    saveData();
-                    showToast(`Đã nhập thành công ${addedCount} VĐV vào hệ thống!`);
-                } catch (err) {
-                    alert('Lỗi: File JSON không hợp lệ!');
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        // --- SƠ ĐỒ & BẢNG ĐẤU ---
-        function getBracketKey(g, w) { return `${g}_${w}`.replace(/\s+/g, '_'); }
+        // --- BỐC THĂM ĐỐI XỨNG 2 BÊN TRÁI - PHẢI CHỤM GIỮA ---
+        function getBracketKey(g, age, w) { return `${g}_${age}_${w}`.replace(/\s+/g, '_'); }
 
         function generateSingleBracket() {
             const gender = document.getElementById('bracketGender').value;
+            const ageGroup = document.getElementById('bracketAgeGroup').value;
             const weightClass = document.getElementById('bracketWeightClass').value;
-            const bracketKey = getBracketKey(gender, weightClass);
-            let eligible = athletes.filter(a => (a.categoryType !== 'Quyền') && a.gender === gender && a.weightClass === weightClass);
-            if (eligible.length < 2) return alert('Cần ít nhất 2 VĐV đối kháng ở hạng cân này!');
+            const bracketKey = getBracketKey(gender, ageGroup, weightClass);
+
+            let eligible = athletes.filter(a => a.categoryType !== 'Quyền' && a.gender === gender && (a.ageGroup || 'Lứa tuổi 1') === ageGroup && a.weightClass === weightClass);
+            if(eligible.length < 2) return alert('Cần ít nhất 2 VĐV đối kháng ở hạng & lứa tuổi này để bốc thăm!');
 
             eligible.sort(() => Math.random() - 0.5);
-            let size = eligible.length > 4 ? 8 : (eligible.length > 2 ? 4 : 2);
-            const matches = [];
-            let matchCounter = 1;
-            const r1 = [];
+            
+            const mid = Math.ceil(eligible.length / 2);
+            const leftAthletes = eligible.slice(0, mid);
+            const rightAthletes = eligible.slice(mid);
 
-            for (let i = 0; i < size / 2; i++) {
-                let red = eligible[i * 2] || null;
-                let blue = eligible[i * 2 + 1] || null;
-                let winner = (red && !blue) ? red : ((!red && blue) ? blue : null);
-                let m = { id: `${bracketKey}_M${matchCounter}`, code: `M${matchCounter++}`, round: 1, red, blue, redScore: 0, blueScore: 0, winner, winType: winner ? 'Bye' : '', nextMatchId: null };
-                r1.push(m); matches.push(m);
-            }
+            let matches = [];
 
-            let prev = r1, r = 2;
-            while(prev.length > 1) {
-                let curr = [];
-                for (let i = 0; i < prev.length; i += 2) {
-                    let m = { id: `${bracketKey}_M${matchCounter}`, code: `M${matchCounter++}`, round: r, red: prev[i].winner, blue: prev[i+1]?.winner || null, redScore: 0, blueScore: 0, winner: null, winType: '', nextMatchId: null };
-                    prev[i].nextMatchId = m.id; if(prev[i+1]) prev[i+1].nextMatchId = m.id;
-                    curr.push(m); matches.push(m);
+            function buildSideBracket(list, sideName) {
+                let currentRoundAthletes = list;
+                let roundLevel = 1;
+                let sideMatches = [];
+
+                while(currentRoundAthletes.length > 1) {
+                    let nextRound = [];
+                    for(let i=0; i<currentRoundAthletes.length; i+=2) {
+                        let red = currentRoundAthletes[i] || null;
+                        let blue = currentRoundAthletes[i+1] || null;
+                        let winner = (red && !blue) ? red : null;
+                        let m = {
+                            id: `${bracketKey}_${sideName}_R${roundLevel}_${Math.random()}`,
+                            matchNo: 0,
+                            side: sideName,
+                            round: roundLevel,
+                            red, blue, redScore: 0, blueScore: 0, winner, nextMatchId: null
+                        };
+                        sideMatches.push(m);
+                        nextRound.push(winner);
+                    }
+                    currentRoundAthletes = nextRound;
+                    roundLevel++;
                 }
-                prev = curr; r++;
+                return sideMatches;
             }
-            brackets[bracketKey] = { gender, weightClass, matches };
+
+            let leftMatches = buildSideBracket(leftAthletes, 'left');
+            let rightMatches = buildSideBracket(rightAthletes, 'right');
+
+            let finalMatch = {
+                id: `${bracketKey}_FINAL_${Math.random()}`,
+                matchNo: 0,
+                side: 'center',
+                round: 99,
+                red: leftMatches.length > 0 ? leftMatches[leftMatches.length - 1].winner : null,
+                blue: rightMatches.length > 0 ? rightMatches[rightMatches.length - 1].winner : null,
+                redScore: 0, blueScore: 0, winner: null, nextMatchId: null
+            };
+
+            if(leftMatches.length > 0) leftMatches[leftMatches.length - 1].nextMatchId = finalMatch.id;
+            if(rightMatches.length > 0) rightMatches[rightMatches.length - 1].nextMatchId = finalMatch.id;
+
+            matches = [...leftMatches, ...rightMatches, finalMatch];
+            brackets[bracketKey] = { gender, ageGroup, weightClass, totalContestants: eligible.length, matches };
             saveData();
-            showToast('Đã bốc thăm nhánh thành công!');
+            showToast(`Đã bốc thăm xong sơ đồ 2 bên [${gender} - ${ageGroup} - ${weightClass}]!`);
         }
 
-        function renderBracketDisplay() {
+        // --- ĐÁNH SỐ TRẬN TOÀN GIẢI ---
+        function autoScheduleAllMatches() {
+            let allValidMatches = [];
+            Object.keys(brackets).forEach(bKey => {
+                brackets[bKey].matches.forEach(m => {
+                    if (m.red && m.blue) {
+                        allValidMatches.push({ ...m, bracketKey: bKey });
+                    }
+                });
+            });
+
+            if(allValidMatches.length === 0) return alert('Chưa có trận đấu nào đủ cặp VĐV (Đỏ & Xanh) để đánh số!');
+
+            allValidMatches.sort((a, b) => a.round - b.round);
+
+            let globalMatchNo = 1;
+            allValidMatches.forEach(item => {
+                let b = brackets[item.bracketKey];
+                if(b) {
+                    let target = b.matches.find(x => x.id === item.id);
+                    if(target) target.matchNo = globalMatchNo++;
+                }
+            });
+
+            saveData();
+            renderMasterMatchList();
+            showToast(`Đã đánh số thứ tự cho ${allValidMatches.length} trận đấu hợp lệ trên toàn giải!`);
+        }
+
+        // --- HIỂN THỊ SƠ ĐỒ THEO CỘT NGANG (NGOÀI BIÊN VÀO TRUNG TÂM) ---
+       function renderBracketDisplay() {
             const gender = document.getElementById('bracketGender').value;
+            const ageGroup = document.getElementById('bracketAgeGroup').value;
             const weightClass = document.getElementById('bracketWeightClass').value;
-            const bracketKey = getBracketKey(gender, weightClass);
+            const bracketKey = getBracketKey(gender, ageGroup, weightClass);
             const bData = brackets[bracketKey];
-            const container = document.getElementById('bracketTree');
-            
-            document.getElementById('bracketTag').innerText = `ĐỐI KHÁNG - ${gender.toUpperCase()}`;
-            document.getElementById('bracketTitle').innerText = `HẠNG CÂN: ${weightClass}`;
+            const container = document.getElementById('horizontalGridBracketContainer');
+
+            document.getElementById('printCategoryHeader').innerText = `${gender.toUpperCase()} - ${ageGroup.toUpperCase()} - ${weightClass} | Contestants: ${bData?.totalContestants || 0}`;
 
             if (!bData || !bData.matches || bData.matches.length === 0) {
-                container.innerHTML = `<div class="text-slate-400 italic py-6">Chưa có sơ đồ nhánh. Vui lòng bấm Bốc Thăm.</div>`;
+                container.innerHTML = `<div class="w-full text-center text-slate-400 italic py-12">Chưa bốc thăm sơ đồ này. Vui lòng bấm nút 'Bốc Thăm Hạng Này'.</div>`;
+                renderClassification(null, [], []);
                 return;
             }
 
-            const rounds = {};
-            bData.matches.forEach(m => {
-                if(!rounds[m.round]) rounds[m.round] = [];
-                rounds[m.round].push(m);
+            let leftMatches = bData.matches.filter(m => m.side === 'left');
+            let rightMatches = bData.matches.filter(m => m.side === 'right');
+            let finalMatch = bData.matches.find(m => m.side === 'center');
+
+            let leftByRound = {};
+            leftMatches.forEach(m => {
+                if(m.round <= 2) {
+                    if(!leftByRound[m.round]) leftByRound[m.round] = [];
+                    leftByRound[m.round].push(m);
+                }
             });
+
+            let rightByRound = {};
+            rightMatches.forEach(m => {
+                if(m.round <= 2) {
+                    if(!rightByRound[m.round]) rightByRound[m.round] = [];
+                    rightByRound[m.round].push(m);
+                }
+            });
+
+            const leftRounds = Object.keys(leftByRound).map(Number).sort((a,b) => a - b);
+            // ĐẢO NGƯỢC THỨ TỰ NHÁNH PHẢI: Vòng 1 ra ngoài biên, Vòng 2 vào trong sát chung kết
+            const rightRounds = Object.keys(rightByRound).map(Number).sort((a,b) => b - a);
 
             let html = '';
-            Object.keys(rounds).sort().forEach(rNum => {
-                const roundMatches = rounds[rNum];
-                let roundTitle = `Vòng loại`;
-                if (roundMatches.length === 2) roundTitle = `Bán Kết`;
-                if (roundMatches.length === 1) roundTitle = `Chung Kết`;
 
-                html += `<div class="flex flex-col justify-around space-y-6 min-w-[240px]">`;
-                html += `<div class="text-center font-bold text-xs uppercase text-slate-500 bg-slate-100 py-1.5 rounded-lg border border-slate-200">${roundTitle}</div>`;
-                
-                roundMatches.forEach(m => {
-                    const redName = m.red ? `${m.red.fullName} (${m.red.unit})` : 'Chờ xác định';
-                    const blueName = m.blue ? `${m.blue.fullName} (${m.blue.unit})` : 'Chờ xác định';
-                    const isRedWin = m.winner && m.winner.id === m.red?.id;
-                    const isBlueWin = m.winner && m.winner.id === m.blue?.id;
-
-                    html += `
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden text-xs relative bracket-node">
-                            <div class="bg-slate-900 text-white px-3 py-1 flex justify-between items-center font-bold">
-                                <span>Trận: <span class="text-yellow-400">${m.code}</span></span>
-                                ${isAdmin ? `<button onclick="openMatchModal('${bracketKey}', '${m.id}')" class="bg-tkd-blue hover:bg-blue-600 px-2 py-0.5 rounded text-[10px]"><i class="fa-solid fa-pen-to-square"></i> Sửa tỷ số</button>` : ''}
-                            </div>
-                            <div class="divide-y divide-slate-100 font-medium">
-                                <div class="p-2 flex justify-between items-center ${isRedWin ? 'bg-red-50 font-bold text-red-700' : ''}">
-                                    <span class="truncate max-w-[150px]" title="${redName}"><span class="inline-block w-2 h-2 rounded-full bg-red-600 mr-1"></span> ${redName}</span>
-                                    <span class="font-black bg-slate-100 px-1.5 py-0.5 rounded">${m.redScore}</span>
-                                </div>
-                                <div class="p-2 flex justify-between items-center ${isBlueWin ? 'bg-blue-50 font-bold text-blue-700' : ''}">
-                                    <span class="truncate max-w-[150px]" title="${blueName}"><span class="inline-block w-2 h-2 rounded-full bg-blue-600 mr-1"></span> ${blueName}</span>
-                                    <span class="font-black bg-slate-100 px-1.5 py-0.5 rounded">${m.blueScore}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
+            // 1. CỘT NHÁNH TRÁI: Vòng 1 ngoài cùng -> Vòng 2 tiến vào trong
+            leftRounds.forEach(r => {
+                html += `<div class="flex-1 flex flex-col justify-around space-y-3 border-r pr-3 border-slate-300">
+                    <div class="text-center font-bold text-[10px] uppercase text-blue-800 bg-blue-50 py-1 border border-blue-200">Vòng ${r} (Trái)</div>`;
+                leftByRound[r].forEach(m => { html += renderHorizontalBox(m, bracketKey); });
                 html += `</div>`;
             });
+
+            // 2. TRẬN CHUNG KẾT Ở GIỮA TRUNG TÂM
+            html += `
+                <div class="w-60 flex flex-col items-center justify-center space-y-2 px-2">
+                    <div class="text-center font-black text-[11px] uppercase text-yellow-800 bg-yellow-100 py-1 px-2 border border-yellow-400 shadow-sm w-full">🏆 FINAL (Chung Kết)</div>
+                    ${finalMatch ? renderHorizontalBox(finalMatch, bracketKey, true) : ''}
+                </div>
+            `;
+
+            // 3. CỘT NHÁNH PHẢI: Đảo thứ tự để Vòng 1 ra ngoài biên phải, Vòng 2 tiến vào trong
+            rightRounds.forEach(r => {
+                html += `<div class="flex-1 flex flex-col justify-around space-y-3 border-l pl-3 border-slate-300">
+                    <div class="text-center font-bold text-[10px] uppercase text-red-800 bg-red-50 py-1 border border-red-200">Vòng ${r} (Phải)</div>`;
+                rightByRound[r].forEach(m => { html += renderHorizontalBox(m, bracketKey); });
+                html += `</div>`;
+            });
+
             container.innerHTML = html;
+            renderClassification(finalMatch, bData.matches);
         }
 
+        function renderHorizontalBox(m, bracketKey, isFinal = false) {
+            const redName = m.red ? `${m.red.fullName} (${m.red.unit})` : '';
+            const blueName = m.blue ? `${m.blue.fullName} (${m.blue.unit})` : '';
+            const isRedWin = m.winner && m.winner.id === m.red?.id;
+            const isBlueWin = m.winner && m.winner.id === m.blue?.id;
+            const showMatchNo = (m.red && m.blue && m.matchNo > 0) ? `<span class="bg-slate-900 text-yellow-400 font-black px-1.5 py-0.5 rounded">${m.matchNo}</span>` : '';
+
+            return `
+                <div class="bracket-box ${isFinal ? 'border-2 border-yellow-500 shadow-md bg-yellow-50/30' : ''}">
+                    <div class="flex justify-between items-center border-b pb-1 mb-1 font-bold text-[10px] text-slate-600">
+                        <span>${isFinal ? 'Chung Kết' : `Trận vòng ${m.round}`}</span>
+                        <div class="flex items-center gap-1">
+                            ${showMatchNo}
+                            ${isAdmin ? `<button onclick="openMatchModal('${bracketKey}', '${m.id}')" class="text-blue-600 hover:underline no-print"><i class="fa-solid fa-pen"></i></button>` : ''}
+                        </div>
+                    </div>
+                    <div class="space-y-1 font-semibold text-[11px]">
+                        <div class="flex justify-between items-center p-1 rounded ${isRedWin ? 'bg-red-100 text-red-900 font-bold' : ''}">
+                            <span class="truncate max-w-[130px]" title="${redName}">${redName || '<span class="text-slate-300 italic">Chờ xác định</span>'}</span>
+                            <span class="font-black">${m.redScore}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-1 rounded ${isBlueWin ? 'bg-blue-100 text-blue-900 font-bold' : ''}">
+                            <span class="truncate max-w-[130px]" title="${blueName}">${blueName || '<span class="text-slate-300 italic">Chờ xác định</span>'}</span>
+                            <span class="font-black">${m.blueScore}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // BẢNG CLASSIFICATION
+        function renderClassification(finalMatch, matches) {
+            let gold = '', silver = '', bronze1 = '', bronze2 = '';
+
+            if (finalMatch && finalMatch.winner) {
+                gold = `${finalMatch.winner.fullName} (${finalMatch.winner.unit})`;
+                let s = (finalMatch.winner.id === finalMatch.red?.id) ? finalMatch.blue : finalMatch.red;
+                if (s) silver = `${s.fullName} (${s.unit})`;
+            }
+
+            let losers = [];
+            matches.forEach(m => {
+                if (m.winner && m.red && m.blue) {
+                    let loser = (m.winner.id === m.red.id) ? m.blue : m.red;
+                    if (loser && !losers.some(l => l.id === loser.id) && gold.indexOf(loser.fullName) === -1 && silver.indexOf(loser.fullName) === -1) {
+                        losers.push(loser);
+                    }
+                }
+            });
+
+            if (losers[0]) bronze1 = `${losers[0].fullName} (${losers[0].unit})`;
+            if (losers[1]) bronze2 = `${losers[1].fullName} (${losers[1].unit})`;
+
+            document.getElementById('classGold').innerText = gold;
+            document.getElementById('classSilver').innerText = silver;
+            document.getElementById('classBronze1').innerText = bronze1;
+            document.getElementById('classBronze2').innerText = bronze2;
+        }
+
+        // DANH SÁCH TRẬN TOÀN GIẢI
         function renderMasterMatchList() {
             const tbody = document.getElementById('masterMatchListBody');
             const filterVal = document.getElementById('filterMatchWeight')?.value || 'ALL';
@@ -916,15 +907,17 @@
 
             Object.keys(brackets).forEach(bKey => {
                 const b = brackets[bKey];
-                if (filterVal === 'ALL' || bKey === filterVal) {
-                    b.matches.forEach(m => {
-                        allMatches.push({ ...m, gender: b.gender, weightClass: b.weightClass, bracketKey: bKey });
-                    });
-                }
+                b.matches.forEach(m => {
+                    if (filterVal === 'ALL' || bKey === filterVal) {
+                        allMatches.push({ ...m, gender: b.gender, ageGroup: b.ageGroup, weightClass: b.weightClass, bracketKey: bKey });
+                    }
+                });
             });
 
+            allMatches.sort((a, b) => (a.matchNo || 9999) - (b.matchNo || 9999));
+
             if (allMatches.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 italic">Chưa có trận đấu nào được tạo.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 italic">Chưa có trận đấu nào được xếp lịch.</td></tr>`;
                 return;
             }
 
@@ -933,17 +926,19 @@
                 const blueName = m.blue ? `${m.blue.fullName} (${m.blue.unit})` : 'Chờ xác định';
                 const isRedWin = m.winner && m.winner.id === m.red?.id;
                 const isBlueWin = m.winner && m.winner.id === m.blue?.id;
+                const rName = m.round === 99 ? 'Chung Kết' : `Vòng ${m.round}`;
+                const matchNoDisplay = m.matchNo > 0 ? `Trận ${m.matchNo}` : '<span class="text-slate-400 italic">Chưa đánh số</span>';
 
                 return `
-                    <tr class="hover:bg-slate-50 border-b border-slate-100">
-                        <td class="p-3 text-center font-black text-tkd-blue">${m.code}</td>
-                        <td class="p-3 font-bold">[${m.gender}] ${m.weightClass}</td>
-                        <td class="p-3 text-slate-600">Vòng ${m.round}</td>
+                    <tr class="hover:bg-slate-50 border-b">
+                        <td class="p-3 text-center font-black text-tkd-blue text-sm">${matchNoDisplay}</td>
+                        <td class="p-3 font-bold">[${m.gender} - ${m.ageGroup}] ${m.weightClass}</td>
+                        <td class="p-3 text-slate-600">${rName}</td>
                         <td class="p-3 bg-red-50/40 text-red-900 font-bold ${isRedWin ? 'bg-red-100 ring-1 ring-red-400' : ''}">${redName}</td>
                         <td class="p-3 bg-blue-50/40 text-blue-900 font-bold ${isBlueWin ? 'bg-blue-100 ring-1 ring-blue-400' : ''}">${blueName}</td>
-                        <td class="p-3 text-center font-black text-sm">${m.redScore} - ${m.blueScore}</td>
-                        <td class="p-3 text-center">${m.winner ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">${m.winner.fullName}</span>` : `<span class="text-amber-600 text-[10px]">Chưa đấu</span>`}</td>
-                        <td class="p-3 text-right admin-only"><button onclick="openMatchModal('${m.bracketKey}', '${m.id}')" class="bg-slate-100 px-2 py-1 rounded font-bold"><i class="fa-solid fa-pen"></i></button></td>
+                        <td class="p-3 text-center font-black">${m.redScore} - ${m.blueScore}</td>
+                        <td class="p-3 text-center">${m.winner ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">${m.winner.fullName}</span>` : `<span class="text-amber-600 italic">Chưa đấu</span>`}</td>
+                        <td class="p-3 text-right admin-only"><button onclick="openMatchModal('${m.bracketKey}', '${m.id}')" class="bg-slate-100 px-2.5 py-1 rounded font-bold"><i class="fa-solid fa-pen"></i></button></td>
                     </tr>
                 `;
             }).join('');
@@ -952,21 +947,20 @@
         function openMatchModal(bracketKey, matchId) {
             const b = brackets[bracketKey];
             const m = b.matches.find(x => x.id === matchId);
-            if(!m || !m.red || !m.blue) return alert('Chưa đủ 2 VĐV!');
+            if(!m || !m.red || !m.blue) return alert('Trận này chưa đủ 2 VĐV thi đấu!');
 
             document.getElementById('modalBracketKey').value = bracketKey;
             document.getElementById('modalMatchId').value = matchId;
-            document.getElementById('modalHeaderTitle').innerText = `Cập Nhật Trận ${m.code} (${b.weightClass})`;
+            document.getElementById('modalHeaderTitle').innerText = `Cập Nhật Trận Số ${m.matchNo || ''} (${b.weightClass})`;
             document.getElementById('modalRedName').innerText = `${m.red.fullName} (${m.red.unit})`;
             document.getElementById('modalBlueName').innerText = `${m.blue.fullName} (${m.blue.unit})`;
             document.getElementById('modalRedScore').value = m.redScore || 0;
             document.getElementById('modalBlueScore').value = m.blueScore || 0;
             
-            const winnerSelect = document.getElementById('modalWinner');
-            winnerSelect.innerHTML = `
-                <option value="">-- Chọn người thắng --</option>
-                <option value="red" ${m.winner && m.winner.id === m.red.id ? 'selected' : ''}>VĐV Đỏ: ${m.red.fullName}</option>
-                <option value="blue" ${m.winner && m.winner.id === m.blue.id ? 'selected' : ''}>VĐV Xanh: ${m.blue.fullName}</option>
+            document.getElementById('modalWinner').innerHTML = `
+                <option value="">-- Chọn VĐV thắng --</option>
+                <option value="red" ${m.winner?.id === m.red.id ? 'selected' : ''}>Đỏ: ${m.red.fullName}</option>
+                <option value="blue" ${m.winner?.id === m.blue.id ? 'selected' : ''}>Xanh: ${m.blue.fullName}</option>
             `;
             document.getElementById('matchModal').classList.remove('hidden');
         }
@@ -987,15 +981,11 @@
             if(m.nextMatchId) {
                 const nextM = b.matches.find(x => x.id === m.nextMatchId);
                 if(nextM) {
-                    const sameRound = b.matches.filter(x => x.round === m.round);
-                    const idx = sameRound.findIndex(x => x.id === m.id);
-                    if(idx % 2 === 0) nextM.red = m.winner;
-                    else nextM.blue = m.winner;
+                    if(m.side === 'left') nextM.red = m.winner;
+                    else if(m.side === 'right') nextM.blue = m.winner;
                 }
             }
-            saveData();
-            closeMatchModal();
-            showToast('Đã lưu kết quả!');
+            saveData(); closeMatchModal(); showToast('Đã lưu kết quả trận đấu!');
         }
 
         function renderMedalTally() {
@@ -1004,65 +994,51 @@
 
             Object.keys(brackets).forEach(bKey => {
                 const b = brackets[bKey];
-                const finals = b.matches.filter(m => !m.nextMatchId);
-                finals.forEach(fm => {
-                    if (fm.winner) {
-                        const g = fm.winner.unit;
-                        const s = (fm.winner.id === fm.red?.id) ? fm.blue?.unit : fm.red?.unit;
-                        if(g && tally[g]) tally[g].gold++;
-                        if(s && tally[s]) tally[s].silver++;
-                    }
-                });
+                const finalMatch = b.matches.find(m => m.round === 99);
+                if (finalMatch && finalMatch.winner) {
+                    const g = finalMatch.winner.unit;
+                    const s = (finalMatch.winner.id === finalMatch.red?.id) ? finalMatch.blue?.unit : finalMatch.red?.unit;
+                    if(g && tally[g]) tally[g].gold++;
+                    if(s && tally[s]) tally[s].silver++;
+                }
             });
 
-            const tbody = document.getElementById('medalTallyBody');
-            tbody.innerHTML = Object.values(tally).map((item, idx) => `
-                <tr class="hover:bg-slate-50 border-b border-slate-100">
-                    <td class="p-3.5 text-center font-bold text-slate-500">${idx + 1}</td>
+            document.getElementById('medalTallyBody').innerHTML = Object.values(tally).map((item, i) => `
+                <tr class="hover:bg-slate-50 border-b">
+                    <td class="p-3.5 text-center font-bold text-slate-500">${i+1}</td>
                     <td class="p-3.5 font-bold text-slate-800">${item.unit}</td>
                     <td class="p-3.5 text-center text-yellow-600 font-black">${item.gold}</td>
                     <td class="p-3.5 text-center text-slate-500 font-bold">${item.silver}</td>
                     <td class="p-3.5 text-center text-amber-700 font-bold">${item.bronze}</td>
                     <td class="p-3.5 text-center font-black">${item.gold + item.silver + item.bronze}</td>
                 </tr>
-            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">Chưa có dữ liệu.</td></tr>`;
+            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">Chưa có dữ liệu huy chương.</td></tr>`;
         }
 
         function generateUnitLink() {
             const uName = document.getElementById('newUnitNameInput').value.trim();
-            if (!uName) return alert('Nhập tên đơn vị!');
-            if (!unitsList.includes(uName)) unitsList.push(uName);
-            saveData();
-            document.getElementById('newUnitNameInput').value = '';
-            showToast('Đã tạo link!');
+            if(!uName) return alert('Nhập tên đơn vị!');
+            if(!unitsList.includes(uName)) unitsList.push(uName);
+            saveData(); document.getElementById('newUnitNameInput').value = ''; showToast('Đã tạo link!');
         }
 
         function deleteUnitLink(uName) {
-            if(confirm(`Xóa link đơn vị "${uName}"?`)) {
-                unitsList = unitsList.filter(u => u !== uName);
-                saveData();
-                showToast('Đã xóa!');
-            }
+            if(confirm(`Xóa link "${uName}"?`)) { unitsList = unitsList.filter(u => u !== uName); saveData(); showToast('Đã xóa!'); }
         }
 
         function renderUnitsLinkTable() {
             const tbody = document.getElementById('unitsLinkTableBody');
-            if (!tbody) return;
+            if(!tbody) return;
             const baseUrl = window.location.href.split('?')[0];
-
-            if (unitsList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-400 italic">Chưa có link đơn vị nào[cite: 2].</td></tr>`;
-                return;
-            }
-
+            if(unitsList.length === 0) { tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-400 italic">Chưa có đơn vị nào.</td></tr>`; return; }
             tbody.innerHTML = unitsList.map(u => {
                 const link = `${baseUrl}?unit=${encodeURIComponent(u)}`;
                 return `
-                    <tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <tr class="border-b hover:bg-slate-50">
                         <td class="p-3 font-bold text-slate-800">${u}</td>
                         <td class="p-3 text-blue-600 truncate max-w-xs"><a href="${link}" target="_blank" class="hover:underline">${link}</a></td>
                         <td class="p-3 text-right space-x-1">
-                            <button onclick="navigator.clipboard.writeText('${link}'); showToast('Đã copy link!');" class="bg-slate-100 px-2 py-1 rounded font-bold text-xs">Copy Link</button>
+                            <button onclick="navigator.clipboard.writeText('${link}'); showToast('Đã copy link!');" class="bg-slate-100 px-2 py-1 rounded font-bold text-xs">Copy</button>
                             <button onclick="deleteUnitLink('${u}')" class="bg-red-50 text-red-600 px-2 py-1 rounded font-bold text-xs"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
@@ -1070,17 +1046,80 @@
             }).join('');
         }
 
-        function toggleLockRegistration() {
-            isLocked = !isLocked;
-            saveData();
-            location.reload();
+        function toggleLockRegistration() { isLocked = !isLocked; saveData(); location.reload(); }
+        function resetAllData() { if(confirm('Xóa toàn bộ dữ liệu?')) { localStorage.clear(); location.reload(); } }
+
+        function importUniversalAthleteData(event) {
+            const file = event.target.files[0];
+            if(!file) return;
+            const fileName = file.name.toLowerCase();
+            const reader = new FileReader();
+            if(fileName.endsWith('.json')) {
+                reader.onload = function(e) { processAndSaveImportedData(JSON.parse(e.target.result)); };
+                reader.readAsText(file);
+            } else if(fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    processAndSaveImportedData(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]));
+                };
+                reader.readAsArrayBuffer(file);
+            } else if(fileName.endsWith('.docx')) {
+                reader.onload = function(e) {
+                    mammoth.extractRawText({ arrayBuffer: e.target.result }).then(res => parseTextAndSave(res.value)).catch(err => alert('Lỗi: ' + err.message));
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                reader.onload = function(e) { parseTextAndSave(e.target.result); };
+                reader.readAsText(file);
+            }
+            event.target.value = '';
         }
 
-        function resetAllData() {
-            if(confirm('Xóa toàn bộ dữ liệu hệ thống?')) {
-                localStorage.clear();
-                location.reload();
-            }
+        function parseTextAndSave(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            let jsonData = [], headers = [];
+            lines.forEach((line, idx) => {
+                let cols = line.split(/[\t,]+/).map(c => c.trim());
+                if(idx === 0) headers = cols;
+                else if(cols.length >= 2) {
+                    let obj = {}; headers.forEach((h, i) => obj[h] = cols[i] || '');
+                    jsonData.push(obj);
+                }
+            });
+            if(jsonData.length) processAndSaveImportedData(jsonData);
+            else alert('Không tìm thấy dữ liệu hợp lệ!');
+        }
+
+        function processAndSaveImportedData(rawList) {
+            if(!Array.isArray(rawList) || rawList.length === 0) return alert('File không có dữ liệu!');
+            let addedCount = 0;
+            rawList.forEach((row) => {
+                const rawName = row['TÊN VDV'] || row['fullName'] || row['Họ và Tên'] || row['Tên VĐV'] || row['Ten'] || '';
+                if(!rawName || String(rawName).trim() === '') return;
+                const fullName = String(rawName).trim();
+                const unit = String(row['ĐƠN VỊ'] || row['unit'] || row['Đơn vị'] || row['CLB'] || 'Chưa rõ').trim();
+                const genderRaw = String(row['NHIỆM VỤ'] || row['gender'] || row['Giới tính'] || 'Nam').toUpperCase();
+                const gender = genderRaw.includes('NỮ') ? 'Nữ' : 'Nam';
+                const ageGroup = row['Lứa tuổi'] || row['ageGroup'] || 'Lứa tuổi 1';
+
+                const pushAth = (cat, sub, wc) => {
+                    athletes.push({
+                        id: 'IMP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
+                        fullName, unit, categoryType: cat, subCategory: sub, gender, ageGroup, weightClass: wc
+                    });
+                    if(unit && !unitsList.includes(unit)) unitsList.push(unit);
+                    addedCount++;
+                };
+
+                if(row['ĐỐI KHÁNG CÁ NHÂN'] && String(row['ĐỐI KHÁNG CÁ NHÂN']).trim() !== 'nan') pushAth('Đối kháng', 'Đơn', String(row['ĐỐI KHÁNG CÁ NHÂN']).trim());
+                if(row['ĐỒNG ĐỘI HỖN HỢP'] && String(row['ĐỒNG ĐỘI HỖN HỢP']).trim() !== 'nan') pushAth('Đối kháng', 'Đồng đội', 'N/A');
+                if(row['ĐỒNG ĐỘI'] && String(row['ĐỒNG ĐỘI']).trim() !== 'nan') pushAth('Đối kháng', 'Đồng đội', String(row['ĐỒNG ĐỘI']).trim());
+                if(!row['ĐỐI KHÁNG CÁ NHÂN'] && !row['ĐỒNG ĐỘI HỖN HỢP'] && !row['ĐỒNG ĐỘI']) {
+                    pushAth(row['categoryType'] || 'Đối kháng', row['subCategory'] || 'Đơn', row['weightClass'] || 'N/A');
+                }
+            });
+            saveData(); renderAthletesTable(); showToast(`Đã nhập thành công ${addedCount} bản ghi!`);
         }
     </script>
 </body>
