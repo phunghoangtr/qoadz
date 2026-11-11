@@ -568,7 +568,7 @@
                 <button onclick="closeShareModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
             </div>
             <div class="p-5 space-y-4">
-                <p class="text-xs text-slate-600">Vì bạn đang dùng GitHub Pages, các đơn vị cần truy cập qua đường link có dấu thăng <strong>(#)</strong> để trang tự nhận diện đúng quyền đăng ký.</p>
+                <p class="text-xs text-slate-600">Trưởng đoàn khi mở đường link này sẽ tự động bị khóa chặt ở giao diện đăng ký của đoàn đó, không thể truy cập Admin.</p>
 
                 <div>
                     <label class="block text-xs font-bold uppercase text-slate-600 mb-1">1. Tên Đơn vị / CLB cần tạo link</label>
@@ -616,15 +616,34 @@
         window.appId = appId;
         window.currentUser = null;
 
-        // Hỗ trợ đọc cả URL thông thường lẫn Hash Route cho GitHub Pages (#client=...&unit=...)
-        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-        const urlParams = new URLSearchParams(window.location.search);
+        // Bắt tham số từ cả URL Search (?) và Hash (#) để chắc chắn nhận diện client mode
+        const fullUrlString = window.location.href;
+        let roleParam = 'admin';
+        let unitParam = '';
 
-        const roleParam = hashParams.get('role') || urlParams.get('role');
-        const unitParam = hashParams.get('unit') || urlParams.get('unit');
+        if (fullUrlString.includes('role=client') || fullUrlString.includes('#client')) {
+            roleParam = 'client';
+            const queryPart = fullUrlString.split('?')[1] || '';
+            const hashPart = fullUrlString.split('#')[1] || '';
+            
+            const paramsQ = new URLSearchParams(queryPart);
+            const paramsH = new URLSearchParams(hashPart);
 
-        window.currentRole = roleParam === 'client' ? 'client' : 'admin';
-        window.clientUnit = unitParam ? decodeURIComponent(unitParam) : '';
+            unitParam = paramsQ.get('unit') || paramsH.get('unit') || '';
+        }
+
+        // Lưu vào localStorage thiết bị client để nếu reload trang vẫn giữ nguyên quyền client
+        if (roleParam === 'client') {
+            localStorage.setItem('tkd_client_mode', 'true');
+            localStorage.setItem('tkd_client_unit', unitParam);
+        } else if (window.location.search.includes('role=admin')) {
+            localStorage.removeItem('tkd_client_mode');
+            localStorage.removeItem('tkd_client_unit');
+        }
+
+        const isSavedClient = localStorage.getItem('tkd_client_mode') === 'true';
+        window.currentRole = (roleParam === 'client' || isSavedClient) ? 'client' : 'admin';
+        window.clientUnit = unitParam || localStorage.getItem('tkd_client_unit') || '';
 
         window.athletes = [];
         window.brackets = {};
@@ -882,8 +901,13 @@
 
         function switchRole(role) {
             window.currentRole = role;
-            window.location.hash = role === 'client' ? `role=client&unit=${encodeURIComponent(window.clientUnit)}` : '';
-            window.location.reload();
+            if (role === 'admin') {
+                localStorage.removeItem('tkd_client_mode');
+                localStorage.removeItem('tkd_client_unit');
+                window.location.href = window.location.pathname + "?role=admin";
+            } else {
+                window.location.reload();
+            }
         }
 
         function toggleLockRegistration() {
@@ -1575,7 +1599,8 @@
         function generateShareLink() {
             const unitName = document.getElementById('shareUnitInput').value.trim();
             const baseUrl = "https://phunghoangtr.github.io/qoadepchaivl/";
-            const link = `${baseUrl}#role=client${unitName ? '&unit=' + encodeURIComponent(unitName) : ''}`;
+            // Dùng đồng thời cả ? và # để GitHub Pages không bị nuốt mất tham số
+            const link = `${baseUrl}?role=client${unitName ? '&unit=' + encodeURIComponent(unitName) : ''}#client`;
             document.getElementById('shareUrlResult').value = link;
         }
 
