@@ -47,11 +47,12 @@
                     <i class="fa-solid fa-hand-fist text-2xl text-yellow-400"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-black tracking-wide uppercase flex items-center gap-2">
-                        TKD Tournament Portal
+                    <!-- Cho phép Admin tự nhập Mã/Tên giải đấu ngay tại tiêu đề -->
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="tournamentCodeInput" onchange="saveTournamentCode()" placeholder="Nhập Mã/Tên Giải (VD: GiaiTKD_2026)" title="Click để đổi mã giải" class="bg-slate-800 text-yellow-400 font-black text-sm px-2 py-1 rounded border border-slate-600 focus:outline-none focus:ring-1 focus:ring-yellow-400 w-52">
                         <span id="roleBadge" class="bg-yellow-400 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Admin BTC</span>
-                    </h1>
-                    <p id="subHeaderDesc" class="text-xs text-slate-300 font-medium">Hệ thống quản lý giải đấu và phân quyền đơn vị</p>
+                    </div>
+                    <p id="subHeaderDesc" class="text-xs text-slate-300 font-medium mt-1">Hệ thống quản lý giải đấu và phân quyền đơn vị</p>
                 </div>
             </div>
 
@@ -69,7 +70,7 @@
                 </button>
 
                 <!-- Nút nhập file từ đoàn gửi về -->
-                <label class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white py-2 px-3 rounded-xl transition flex items-center gap-1.5 cursor-pointer">
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white py-2 px-3 rounded-xl transition flex items-center gap-1.5 cursor-pointer" title="Nhập file JSON do các đoàn gửi lên">
                     <i class="fa-solid fa-file-import"></i> Nhập File Đăng Ký
                     <input type="file" id="importJsonInput" accept=".json" onchange="importAthleteData(event)" class="hidden">
                 </label>
@@ -433,27 +434,44 @@
     </div>
 
     <script>
+        // --- QUẢN LÝ MÃ GIẢI ĐẤU ĐỘNG ---
+        let tournamentCode = localStorage.getItem('tkd_spa_tournamentCode') || 'Giai_TKD_2026';
+        
+        function getStorageKey(key) {
+            return `${tournamentCode}_${key}`;
+        }
+
+        function saveTournamentCode() {
+            const inputVal = document.getElementById('tournamentCodeInput').value.trim();
+            if(!inputVal) return alert('Mã giải không được để trống!');
+            tournamentCode = inputVal.replace(/\s+/g, '_');
+            localStorage.setItem('tkd_spa_tournamentCode', tournamentCode);
+            showToast('Đã đổi sang mã giải: ' + tournamentCode);
+            location.reload(); // Tải lại để load dữ liệu đúng theo mã giải mới
+        }
+
         const SUB_CATEGORIES = {
             "Đối kháng": ["Đơn", "Đồng đội"],
             "Quyền": ["Đơn", "Đôi", "Đồng đội"]
         };
 
-        let weightClasses = JSON.parse(localStorage.getItem('tkd_spa_weightClasses')) || {
+        let weightClasses = JSON.parse(localStorage.getItem(getStorageKey('weightClasses'))) || {
             "Nam": ["-54 kg", "-58 kg", "-63 kg", "-68 kg", "-74 kg", "-80 kg", "-87 kg", "+87 kg"],
             "Nữ": ["-46 kg", "-49 kg", "-53 kg", "-57 kg", "-62 kg", "-67 kg", "-73 kg", "+73 kg"]
         };
 
-        let athletes = JSON.parse(localStorage.getItem('tkd_spa_athletes')) || [];
-        let brackets = JSON.parse(localStorage.getItem('tkd_spa_brackets')) || {};
-        let unitsList = JSON.parse(localStorage.getItem('tkd_spa_units')) || [];
-        let isLocked = JSON.parse(localStorage.getItem('tkd_spa_locked')) || false;
-        let registrationDeadline = localStorage.getItem('tkd_spa_deadline') || '';
+        let athletes = JSON.parse(localStorage.getItem(getStorageKey('athletes'))) || [];
+        let brackets = JSON.parse(localStorage.getItem(getStorageKey('brackets'))) || {};
+        let unitsList = JSON.parse(localStorage.getItem(getStorageKey('units'))) || [];
+        let isLocked = JSON.parse(localStorage.getItem(getStorageKey('locked'))) || false;
+        let registrationDeadline = localStorage.getItem(getStorageKey('deadline')) || '';
 
         const urlParams = new URLSearchParams(window.location.search);
         const clientUnit = urlParams.get('unit');
         const isAdmin = !clientUnit;
 
         document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('tournamentCodeInput').value = tournamentCode;
             checkDeadlineStatus();
             applyRolePermissions();
             onCategoryTypeChange();
@@ -476,7 +494,7 @@
             const val = document.getElementById('deadlineInput').value;
             if(!val) return alert('Vui lòng chọn thời gian hạn chót!');
             registrationDeadline = val;
-            localStorage.setItem('tkd_spa_deadline', registrationDeadline);
+            localStorage.setItem(getStorageKey('deadline'), registrationDeadline);
             checkDeadlineStatus();
             updateDeadlineUI();
             showToast('Đã xác nhận thời gian hạn chót!');
@@ -520,6 +538,7 @@
             if (!isAdmin) {
                 document.getElementById('roleBadge').innerText = `Đơn vị: ${clientUnit}`;
                 document.getElementById('subHeaderDesc').innerText = `Cổng đăng ký vận động viên riêng của đoàn ${clientUnit}`;
+                document.getElementById('tournamentCodeInput').setAttribute('readonly', true);
                 document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
                 document.getElementById('adminGlobalControls').classList.add('hidden');
                 document.getElementById('exportActionForClient').classList.remove('hidden');
@@ -537,11 +556,11 @@
         }
 
         function saveData() {
-            localStorage.setItem('tkd_spa_athletes', JSON.stringify(athletes));
-            localStorage.setItem('tkd_spa_brackets', JSON.stringify(brackets));
-            localStorage.setItem('tkd_spa_units', JSON.stringify(unitsList));
-            localStorage.setItem('tkd_spa_locked', JSON.stringify(isLocked));
-            localStorage.setItem('tkd_spa_weightClasses', JSON.stringify(weightClasses));
+            localStorage.setItem(getStorageKey('athletes'), JSON.stringify(athletes));
+            localStorage.setItem(getStorageKey('brackets'), JSON.stringify(brackets));
+            localStorage.setItem(getStorageKey('units'), JSON.stringify(unitsList));
+            localStorage.setItem(getStorageKey('locked'), JSON.stringify(isLocked));
+            localStorage.setItem(getStorageKey('weightClasses'), JSON.stringify(weightClasses));
             renderAthletesTable();
             renderBracketDisplay();
             renderMasterMatchList();
@@ -756,7 +775,7 @@
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `DanhSach_DangKy_${clientUnit || 'Tong'}.json`);
+            downloadAnchor.setAttribute("download", `DanhSach_DangKy_${clientUnit || 'Tong'}_${tournamentCode}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
