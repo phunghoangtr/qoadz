@@ -88,11 +88,11 @@
 
                 <!-- Admin Only Actions -->
                 <div id="adminActions" class="flex items-center space-x-2">
-                    <button onclick="openWeightConfigModal()" class="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold py-2 px-3 rounded-xl border border-white/20 transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-sliders"></i> Cấu Hình Hạng Cân
-                    </button>
                     <button onclick="openShareModal()" class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 text-xs font-black py-2 px-3.5 rounded-xl shadow-md transition flex items-center gap-1.5">
                         <i class="fa-solid fa-share-nodes"></i> Link Đăng Ký Cho Đoàn
+                    </button>
+                    <button onclick="openWeightConfigModal()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold py-2 px-3.5 rounded-xl shadow-md transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-scale-balanced"></i> Cấu Hình Hạng Cân
                     </button>
                     <button onclick="toggleLockRegistration()" id="lockBtn" class="bg-white/10 hover:bg-white/20 text-xs font-semibold text-white py-2 px-3 rounded-xl border border-white/20 transition flex items-center gap-1.5">
                         <i class="fa-solid fa-lock-open text-emerald-400"></i> Mở Đăng Ký
@@ -176,15 +176,15 @@
             <i class="fa-solid fa-triangle-exclamation text-red-600 text-xl"></i>
             <div>
                 <h4 class="font-bold text-sm">Cổng Đăng Ký Đã Đóng (Quá Hạn / Khóa Bởi BTC)</h4>
-                <p class="text-xs">Đã qua thời hạn hoặc Ban Tổ Chức đã khóa đăng ký. Mục đăng ký và nút nhập liệu đã bị ẩn vĩnh viễn trên liên kết.</p>
+                <p class="text-xs">Đã qua thời hạn hoặc Ban Tổ Chức đã khóa đăng ký. Mọi chức năng đăng ký/sửa/xóa đã bị ẩn hoàn toàn.</p>
             </div>
         </div>
 
         <!-- ================= TAB 1: ĐĂNG KÝ VĐV ================= -->
         <section id="view-register" class="tab-content space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div id="registrationCardContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Registration Form -->
-                <div id="registrationFormCard" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <div id="registrationFormWrapper" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                     <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
                         <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
                             <i class="fa-solid fa-address-card text-tkd-blue"></i>
@@ -215,8 +215,8 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Loại Hình *</label>
-                                <select id="eventType" required onchange="onEventTypeChange()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-tkd-blue">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Quyền / Đối kháng *</label>
+                                <select id="categoryType" required onchange="updateCategorySubOptions(); updateWeightOptions();" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-tkd-blue">
                                     <option value="Đối kháng">Đối kháng (Kyorugi)</option>
                                     <option value="Quyền">Quyền (Poomsae)</option>
                                 </select>
@@ -224,17 +224,16 @@
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
-                            <div id="weightClassContainer">
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Hạng cân chuẩn *</label>
-                                <select id="weightClass" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-tkd-blue">
-                                    <!-- Dynamic Options -->
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nội dung thi đấu *</label>
+                                <select id="subCategory" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-tkd-blue">
+                                    <!-- Dynamic Sub Options -->
                                 </select>
                             </div>
-                            <div id="subEventContainer">
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Nội dung thi đấu *</label>
-                                <select id="subEvent" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-tkd-blue">
-                                    <option value="Cá nhân">Cá nhân</option>
-                                    <option value="Đồng đội">Đồng đội</option>
+                            <div id="weightContainer">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">Hạng cân chuẩn *</label>
+                                <select id="weightClass" required class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-tkd-blue">
+                                    <!-- Dynamic Options -->
                                 </select>
                             </div>
                         </div>
@@ -251,12 +250,12 @@
                 </div>
 
                 <!-- Registered Athletes Table -->
-                <div id="athletesTableContainer" class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <div id="athletesTableWrapper" class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-100 gap-3">
                         <div>
                             <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
                                 <i class="fa-solid fa-users text-tkd-red"></i>
-                                <span id="tableTitleText">Danh Sách VĐV Thi Đấu Real-Time</span>
+                                Danh Sách VĐV Thi Đấu Real-Time
                             </h2>
                             <p class="text-xs text-slate-500">Tổng cộng: <span id="totalAthletesCount" class="font-bold text-slate-800">0</span> vận động viên</p>
                         </div>
@@ -281,8 +280,9 @@
                                     <th class="p-3">Họ và Tên VĐV</th>
                                     <th class="p-3">Đơn Vị / CLB</th>
                                     <th class="p-3">Giới Tính</th>
-                                    <th class="p-3">Hạng Cân / Nội Dung</th>
-                                    <th id="tableActionHeader" class="p-3 text-right">Thao Tác</th>
+                                    <th class="p-3">Loại / Nội Dung</th>
+                                    <th class="p-3">Hạng Cân</th>
+                                    <th class="p-3 text-right" id="thActionHeader">Thao Tác</th>
                                 </tr>
                             </thead>
                             <tbody id="athletesTableBody" class="divide-y divide-slate-100 text-xs font-medium">
@@ -389,7 +389,7 @@
                                 <th class="p-3 bg-blue-50 text-blue-700"><i class="fa-solid fa-shield text-tkd-blue"></i> Góc Xanh (Cheong)</th>
                                 <th class="p-3 text-center">Tỷ Số</th>
                                 <th class="p-3 text-center">Trạng Thái</th>
-                                <th class="p-3 text-right">Thao Tác</th>
+                                <th class="p-3 text-right" id="thFightQueueAction">Thao Tác</th>
                             </tr>
                         </thead>
                         <tbody id="fightQueueBody" class="divide-y divide-slate-100 text-xs font-medium">
@@ -517,20 +517,20 @@
 
     <!-- WEIGHT CONFIG MODAL (ADMIN ONLY) -->
     <div id="weightConfigModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-100">
             <div class="bg-slate-900 text-white px-5 py-3.5 flex justify-between items-center">
                 <h3 class="font-bold text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-sliders text-yellow-400"></i> Cấu Hình Hạng Cân Đối Kháng Theo Điều Lệ
+                    <i class="fa-solid fa-scale-balanced text-yellow-400"></i> Quản Lý & Tùy Chỉnh Hạng Cân
                 </h3>
                 <button onclick="closeWeightConfigModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
             </div>
             <div class="p-5 space-y-4">
-                <p class="text-xs text-slate-600">Thêm hoặc xóa các hạng cân cho Nam và Nữ để phù hợp với điều lệ giải đấu của bạn.</p>
-
-                <div class="grid grid-cols-2 gap-4">
+                <p class="text-xs text-slate-600">Thêm hoặc xóa các hạng cân đối kháng tùy theo Điều lệ giải đấu thực tế của bạn.</p>
+                
+                <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Giới tính</label>
-                        <select id="configGender" onchange="renderWeightConfigList()" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl font-bold">
+                        <select id="configGender" onchange="renderWeightConfigList()" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl">
                             <option value="Nam">Nam</option>
                             <option value="Nữ">Nữ</option>
                         </select>
@@ -538,21 +538,21 @@
                     <div>
                         <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Thêm hạng cân mới</label>
                         <div class="flex gap-1">
-                            <input type="text" id="newWeightInput" placeholder="VD: -51 kg" class="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-xl">
-                            <button onclick="addWeightClass()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 text-xs rounded-xl whitespace-nowrap"><i class="fa-solid fa-plus"></i> Thêm</button>
+                            <input type="text" id="newWeightInput" placeholder="Ví dụ: -51 kg" class="w-full px-2.5 py-1.5 text-xs border border-slate-300 rounded-xl">
+                            <button onclick="addNewWeightClass()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold rounded-xl whitespace-new"><i class="fa-solid fa-plus"></i></button>
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-2">Danh sách hạng cân hiện tại:</label>
-                    <div id="weightConfigList" class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-slate-50 border border-slate-200 rounded-xl">
-                        <!-- Dynamic Tags -->
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Danh sách hạng cân hiện tại</label>
+                    <div id="weightListContainer" class="max-h-48 overflow-y-auto space-y-1.5 border border-slate-200 p-2.5 rounded-xl bg-slate-50">
+                        <!-- Dynamic list -->
                     </div>
                 </div>
 
-                <div class="pt-2 flex justify-end gap-2 border-t border-slate-100">
-                    <button onclick="closeWeightConfigModal()" class="px-4 py-2 text-xs font-bold bg-tkd-blue text-white rounded-xl shadow">Hoàn Thành</button>
+                <div class="pt-2 text-right">
+                    <button onclick="closeWeightConfigModal()" class="px-4 py-2 text-xs font-bold bg-slate-900 text-white rounded-xl">Đóng & Lưu</button>
                 </div>
             </div>
         </div>
@@ -563,20 +563,20 @@
         <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-100">
             <div class="bg-slate-900 text-white px-5 py-3.5 flex justify-between items-center">
                 <h3 class="font-bold text-sm flex items-center gap-2">
-                    <i class="fa-solid fa-globe text-yellow-400"></i> Link Đăng Ký Chuẩn Cho GitHub Pages
+                    <i class="fa-solid fa-share-nodes text-yellow-400"></i> Tạo Đường Link Đăng Ký Cho Đơn Vị
                 </h3>
                 <button onclick="closeShareModal()" class="text-slate-400 hover:text-white text-lg font-bold">&times;</button>
             </div>
             <div class="p-5 space-y-4">
-                <p class="text-xs text-slate-600">Trưởng đoàn khi mở đường link này sẽ tự động bị khóa chặt ở giao diện đăng ký của đoàn đó, không thể truy cập Admin.</p>
+                <p class="text-xs text-slate-600">Nhập tên Đơn vị/CLB để tạo đường dẫn đăng ký riêng tương thích với GitHub Pages.</p>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">1. Tên Đơn vị / CLB cần tạo link</label>
-                    <input type="text" id="shareUnitInput" oninput="generateShareLink()" placeholder="Ví dụ: TP. Hồ Chí Minh" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-tkd-blue">
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Tên Đơn vị / CLB nhận link</label>
+                    <input type="text" id="shareUnitInput" oninput="generateShareLink()" placeholder="Ví dụ: dalat" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-tkd-blue">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">2. Đường Link Đăng Ký (Gửi cho trưởng đoàn)</label>
+                    <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Đường link liên kết cho Đơn vị</label>
                     <div class="flex gap-2">
                         <input type="text" id="shareUrlResult" readonly class="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-300 rounded-xl font-mono text-slate-600">
                         <button onclick="copyShareLink()" class="bg-tkd-blue hover:bg-blue-700 text-white font-bold px-4 text-xs rounded-xl flex items-center gap-1 whitespace-nowrap">
@@ -616,43 +616,45 @@
         window.appId = appId;
         window.currentUser = null;
 
-        // Bắt tham số từ cả URL Search (?) và Hash (#) để chắc chắn nhận diện client mode
-        const fullUrlString = window.location.href;
-        let roleParam = 'admin';
-        let unitParam = '';
-
-        if (fullUrlString.includes('role=client') || fullUrlString.includes('#client')) {
-            roleParam = 'client';
-            const queryPart = fullUrlString.split('?')[1] || '';
-            const hashPart = fullUrlString.split('#')[1] || '';
+        // Xử lý định tuyến GitHub Pages Hash Router chuẩn xác 100%
+        function checkClientRoute() {
+            const hashStr = window.location.hash;
+            const searchStr = window.location.search;
             
-            const paramsQ = new URLSearchParams(queryPart);
-            const paramsH = new URLSearchParams(hashPart);
+            if (hashStr.includes('role=client') || searchStr.includes('role=client')) {
+                const queryString = (hashStr.includes('role=client') ? hashStr.substring(1) : searchStr.substring(1));
+                const params = new URLSearchParams(queryString);
+                const unit = params.get('unit') || '';
+                
+                localStorage.setItem('tkd_role', 'client');
+                localStorage.setItem('tkd_unit', unit);
+                return { role: 'client', unit };
+            }
+            
+            if (hashStr.includes('role=admin') || searchStr.includes('role=admin')) {
+                localStorage.removeItem('tkd_role');
+                localStorage.removeItem('tkd_unit');
+                return { role: 'admin', unit: '' };
+            }
 
-            unitParam = paramsQ.get('unit') || paramsH.get('unit') || '';
+            const savedRole = localStorage.getItem('tkd_role');
+            const savedUnit = localStorage.getItem('tkd_unit') || '';
+            if (savedRole === 'client') {
+                return { role: 'client', unit: savedUnit };
+            }
+
+            return { role: 'admin', unit: '' };
         }
 
-        // Lưu vào localStorage thiết bị client để nếu reload trang vẫn giữ nguyên quyền client
-        if (roleParam === 'client') {
-            localStorage.setItem('tkd_client_mode', 'true');
-            localStorage.setItem('tkd_client_unit', unitParam);
-        } else if (window.location.search.includes('role=admin')) {
-            localStorage.removeItem('tkd_client_mode');
-            localStorage.removeItem('tkd_client_unit');
-        }
-
-        const isSavedClient = localStorage.getItem('tkd_client_mode') === 'true';
-        window.currentRole = (roleParam === 'client' || isSavedClient) ? 'client' : 'admin';
-        window.clientUnit = unitParam || localStorage.getItem('tkd_client_unit') || '';
+        const currentRoute = checkClientRoute();
+        window.currentRole = currentRoute.role;
+        window.clientUnit = currentRoute.unit;
 
         window.athletes = [];
         window.brackets = {};
         window.isLocked = false;
         window.tournamentDeadline = '';
-        window.weightClasses = {
-            "Nam": ["-54 kg", "-58 kg", "-63 kg", "-68 kg", "-74 kg", "-80 kg", "-87 kg", "+87 kg"],
-            "Nữ": ["-46 kg", "-49 kg", "-53 kg", "-57 kg", "-62 kg", "-67 kg", "-73 kg", "+73 kg"]
-        };
+        window.customWeightClasses = null;
 
         const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'tournament', 'main_data');
 
@@ -683,9 +685,7 @@
                     window.brackets = data.brackets || {};
                     window.isLocked = !!data.isLocked;
                     window.tournamentDeadline = data.tournamentDeadline || '';
-                    if (data.weightClasses) {
-                        window.weightClasses = data.weightClasses;
-                    }
+                    window.customWeightClasses = data.customWeightClasses || null;
                     
                     document.getElementById('syncDot').className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
                     document.getElementById('syncText').innerText = "Đã đồng bộ Cloud Real-time";
@@ -719,7 +719,7 @@
                     brackets: window.brackets,
                     isLocked: window.isLocked,
                     tournamentDeadline: window.tournamentDeadline || '',
-                    weightClasses: window.weightClasses,
+                    customWeightClasses: window.customWeightClasses || null,
                     updatedAt: new Date().toISOString()
                 });
             } catch (err) {
@@ -731,54 +731,68 @@
     </script>
 
     <script>
-        function updateWeightOptions() {
-            const gender = document.getElementById('gender').value;
-            const eventType = document.getElementById('eventType').value;
-            const weightSelect = document.getElementById('weightClass');
-            const subEventSelect = document.getElementById('subEvent');
-            const weightContainer = document.getElementById('weightClassContainer');
+        const DEFAULT_WEIGHT_CLASSES = {
+            "Nam": ["-54 kg", "-58 kg", "-63 kg", "-68 kg", "-74 kg", "-80 kg", "-87 kg", "+87 kg"],
+            "Nữ": ["-46 kg", "-49 kg", "-53 kg", "-57 kg", "-62 kg", "-67 kg", "-73 kg", "+73 kg"]
+        };
 
-            weightSelect.innerHTML = '';
-            subEventSelect.innerHTML = '';
+        function getActiveWeightClasses() {
+            return window.customWeightClasses || DEFAULT_WEIGHT_CLASSES;
+        }
 
-            const activeWeightList = (window.weightClasses && window.weightClasses[gender]) ? window.weightClasses[gender] : [];
+        function updateCategorySubOptions() {
+            const catType = document.getElementById('categoryType').value;
+            const subSelect = document.getElementById('subCategory');
+            const weightContainer = document.getElementById('weightContainer');
+            subSelect.innerHTML = '';
 
-            if (eventType === 'Đối kháng') {
-                weightContainer.style.display = 'block';
-                activeWeightList.forEach(w => {
-                    const opt = document.createElement('option');
-                    opt.value = w;
-                    opt.innerText = w;
-                    weightSelect.appendChild(opt);
-                });
-
-                ['Cá nhân', 'Đồng đội'].forEach(sub => {
-                    const opt = document.createElement('option');
-                    opt.value = sub;
-                    opt.innerText = sub;
-                    subEventSelect.appendChild(opt);
-                });
-            } else {
-                weightContainer.style.display = 'none';
+            if (catType === 'Quyền') {
                 ['Đơn', 'Đôi', 'Đồng đội'].forEach(sub => {
                     const opt = document.createElement('option');
                     opt.value = sub;
                     opt.innerText = sub;
-                    subEventSelect.appendChild(opt);
+                    subSelect.appendChild(opt);
                 });
+                weightContainer.style.display = 'none';
+            } else {
+                ['Cá nhân', 'Đồng đội'].forEach(sub => {
+                    const opt = document.createElement('option');
+                    opt.value = sub;
+                    opt.innerText = sub;
+                    subSelect.appendChild(opt);
+                });
+                weightContainer.style.display = 'block';
             }
         }
 
-        function onEventTypeChange() {
-            updateWeightOptions();
+        function updateWeightOptions() {
+            const gender = document.getElementById('gender').value;
+            const catType = document.getElementById('categoryType').value;
+            const select = document.getElementById('weightClass');
+            select.innerHTML = '';
+
+            if (catType === 'Quyền') {
+                const opt = document.createElement('option');
+                opt.value = 'N/A';
+                opt.innerText = 'Không áp dụng hạng cân';
+                select.appendChild(opt);
+                return;
+            }
+
+            const weights = getActiveWeightClasses()[gender] || [];
+            weights.forEach(w => {
+                const opt = document.createElement('option');
+                opt.value = w;
+                opt.innerText = w;
+                select.appendChild(opt);
+            });
         }
 
         function updateBracketWeightOptions() {
             const gender = document.getElementById('bracketGender').value;
             const select = document.getElementById('bracketWeightClass');
             select.innerHTML = '';
-            const activeWeightList = (window.weightClasses && window.weightClasses[gender]) ? window.weightClasses[gender] : [];
-            activeWeightList.forEach(w => {
+            (getActiveWeightClasses()[gender] || []).forEach(w => {
                 const opt = document.createElement('option');
                 opt.value = w;
                 opt.innerText = w;
@@ -787,6 +801,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            updateCategorySubOptions();
             updateWeightOptions();
             updateBracketWeightOptions();
             if (window.initAuthAndSync) {
@@ -804,11 +819,12 @@
             const singleBracketBtn = document.getElementById('singleBracketBtn');
             const lockBtn = document.getElementById('lockBtn');
             const expiredBanner = document.getElementById('expiredBanner');
-            const registrationFormCard = document.getElementById('registrationFormCard');
-            const athletesTableContainer = document.getElementById('athletesTableContainer');
-            const tableActionHeader = document.getElementById('tableActionHeader');
-            const tabRegisterText = document.getElementById('tabRegisterText');
             const unitInput = document.getElementById('unit');
+            const registrationFormWrapper = document.getElementById('registrationFormWrapper');
+            const athletesTableWrapper = document.getElementById('athletesTableWrapper');
+            const thActionHeader = document.getElementById('thActionHeader');
+            const thFightQueueAction = document.getElementById('thFightQueueAction');
+            const tabRegisterText = document.getElementById('tabRegisterText');
 
             let isExpired = false;
             if (window.tournamentDeadline) {
@@ -833,6 +849,23 @@
                 document.getElementById('clientDeadlineBadge').innerText = "Cổng đăng ký đang mở";
             }
 
+            // Nếu hết giờ hoặc khóa đối với Client: ẨN HOÀN TOÀN MỤC ĐĂNG KÝ
+            if (window.currentRole === 'client' && registrationLocked) {
+                registrationFormWrapper.classList.add('hidden');
+                athletesTableWrapper.className = "lg:col-span-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col";
+                thActionHeader.classList.add('hidden');
+                thFightQueueAction.classList.add('hidden');
+                tabRegisterText.innerText = "1. Danh Sách VĐV";
+            } else {
+                registrationFormWrapper.classList.remove('hidden');
+                athletesTableWrapper.className = "lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col";
+                if (window.currentRole === 'admin') {
+                    thActionHeader.classList.remove('hidden');
+                    thFightQueueAction.classList.remove('hidden');
+                }
+                tabRegisterText.innerText = "1. Đăng Ký VĐV";
+            }
+
             if (window.currentRole === 'client') {
                 roleBadge.innerText = 'CLIENT MODE';
                 roleBadge.className = 'bg-blue-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase';
@@ -851,18 +884,6 @@
 
                 if (adminAutoBracketBtn) adminAutoBracketBtn.classList.add('hidden');
                 if (singleBracketBtn) singleBracketBtn.classList.add('hidden');
-
-                if (registrationLocked) {
-                    registrationFormCard.classList.add('hidden');
-                    athletesTableContainer.className = "lg:col-span-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col";
-                    tableActionHeader.classList.add('hidden');
-                    tabRegisterText.innerText = "1. Danh Sách VĐV (Đã Đóng Đăng Ký)";
-                } else {
-                    registrationFormCard.classList.remove('hidden');
-                    athletesTableContainer.className = "lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col";
-                    tableActionHeader.classList.remove('hidden');
-                    tabRegisterText.innerText = "1. Đăng Ký VĐV";
-                }
             } else {
                 roleBadge.innerText = 'ADMIN MODE';
                 roleBadge.className = 'bg-yellow-400 text-slate-900 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase';
@@ -871,11 +892,6 @@
                 clientActions.classList.add('hidden');
                 clientInfoBanner.classList.add('hidden');
                 adminDeadlineBanner.classList.remove('hidden');
-
-                registrationFormCard.classList.remove('hidden');
-                athletesTableContainer.className = "lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col";
-                tableActionHeader.classList.remove('hidden');
-                tabRegisterText.innerText = "1. Đăng Ký VĐV";
 
                 unitInput.readOnly = false;
                 unitInput.classList.remove('bg-slate-100');
@@ -891,6 +907,62 @@
             }
         }
 
+        window.openWeightConfigModal = function() {
+            if (window.currentRole !== 'admin') return;
+            document.getElementById('weightConfigModal').classList.remove('hidden');
+            renderWeightConfigList();
+        }
+
+        window.closeWeightConfigModal = function() {
+            document.getElementById('weightConfigModal').classList.add('hidden');
+        }
+
+        function renderWeightConfigList() {
+            const gender = document.getElementById('configGender').value;
+            const container = document.getElementById('weightListContainer');
+            const weights = getActiveWeightClasses()[gender] || [];
+
+            container.innerHTML = weights.map((w, idx) => `
+                <div class="flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-700">
+                    <span>${w}</span>
+                    <button onclick="removeWeightClass('${gender}', ${idx})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+
+        window.addNewWeightClass = function() {
+            const gender = document.getElementById('configGender').value;
+            const val = document.getElementById('newWeightInput').value.trim();
+            if (!val) return;
+
+            if (!window.customWeightClasses) {
+                window.customWeightClasses = JSON.parse(JSON.stringify(DEFAULT_WEIGHT_CLASSES));
+            }
+
+            if (!window.customWeightClasses[gender].includes(val)) {
+                window.customWeightClasses[gender].push(val);
+                document.getElementById('newWeightInput').value = '';
+                renderWeightConfigList();
+                updateWeightOptions();
+                updateBracketWeightOptions();
+                window.saveCloudData();
+                showToast('Đã thêm hạng cân mới!');
+            }
+        }
+
+        window.removeWeightClass = function(gender, idx) {
+            if (!window.customWeightClasses) {
+                window.customWeightClasses = JSON.parse(JSON.stringify(DEFAULT_WEIGHT_CLASSES));
+            }
+
+            window.customWeightClasses[gender].splice(idx, 1);
+            renderWeightConfigList();
+            updateWeightOptions();
+            updateBracketWeightOptions();
+            window.saveCloudData();
+            showToast('Đã xóa hạng cân!', 'error');
+        }
+
         window.saveDeadline = function() {
             if (window.currentRole !== 'admin') return;
             const val = document.getElementById('deadlineInput').value;
@@ -902,12 +974,17 @@
         function switchRole(role) {
             window.currentRole = role;
             if (role === 'admin') {
-                localStorage.removeItem('tkd_client_mode');
-                localStorage.removeItem('tkd_client_unit');
-                window.location.href = window.location.pathname + "?role=admin";
-            } else {
-                window.location.reload();
+                localStorage.removeItem('tkd_role');
+                localStorage.removeItem('tkd_unit');
+                window.location.hash = '';
+                window.location.href = window.location.origin + window.location.pathname;
+                return;
             }
+            applyRolePermissions();
+            renderAthletesTable();
+            renderBracketDisplay();
+            renderFightQueue();
+            showToast(`Đã chuyển sang chế độ ${role.toUpperCase()}`);
         }
 
         function toggleLockRegistration() {
@@ -965,9 +1042,9 @@
             const fullName = document.getElementById('fullName').value.trim();
             const unit = document.getElementById('unit').value.trim();
             const gender = document.getElementById('gender').value;
-            const eventType = document.getElementById('eventType').value;
-            const subEvent = document.getElementById('subEvent').value;
-            const weightClass = eventType === 'Đối kháng' ? document.getElementById('weightClass').value : 'Nội dung Quyền';
+            const categoryType = document.getElementById('categoryType').value;
+            const subCategory = document.getElementById('subCategory').value;
+            const weightClass = (categoryType === 'Quyền') ? 'N/A' : document.getElementById('weightClass').value;
 
             if (window.currentRole === 'client' && window.clientUnit && unit.toLowerCase() !== window.clientUnit.toLowerCase()) {
                 alert(`Bạn chỉ được phép đăng ký VĐV thuộc đoàn "${window.clientUnit}"!`);
@@ -981,12 +1058,12 @@
                         alert('Bạn không có quyền sửa VĐV của đơn vị khác!');
                         return;
                     }
-                    window.athletes[idx] = { id, fullName, unit, gender, eventType, subEvent, weightClass };
+                    window.athletes[idx] = { id, fullName, unit, gender, categoryType, subCategory, weightClass };
                     showToast('Đã cập nhật VĐV!');
                 }
             } else {
                 const newId = 'VDV-' + Date.now().toString().substr(-6);
-                window.athletes.push({ id: newId, fullName, unit, gender, eventType, subEvent, weightClass });
+                window.athletes.push({ id: newId, fullName, unit, gender, categoryType, subCategory, weightClass });
                 showToast('Thêm VĐV mới thành công!');
             }
 
@@ -1014,13 +1091,13 @@
             document.getElementById('fullName').value = item.fullName;
             document.getElementById('unit').value = item.unit;
             document.getElementById('gender').value = item.gender;
-            document.getElementById('eventType').value = item.eventType || 'Đối kháng';
+            document.getElementById('categoryType').value = item.categoryType || 'Đối kháng';
+            updateCategorySubOptions();
+            document.getElementById('subCategory').value = item.subCategory || 'Cá nhân';
             updateWeightOptions();
-            
-            if (item.eventType === 'Đối kháng') {
+            if (item.categoryType !== 'Quyền') {
                 document.getElementById('weightClass').value = item.weightClass;
             }
-            document.getElementById('subEvent').value = item.subEvent || 'Cá nhân';
 
             document.getElementById('form-title').innerText = "Sửa Thông Tin VĐV";
             document.getElementById('submitBtn').innerHTML = `<i class="fa-solid fa-pen"></i> Cập Nhật VĐV`;
@@ -1030,7 +1107,7 @@
         function cancelEdit() {
             document.getElementById('athleteId').value = '';
             document.getElementById('athleteForm').reset();
-            document.getElementById('eventType').value = 'Đối kháng';
+            updateCategorySubOptions();
             updateWeightOptions();
             document.getElementById('form-title').innerText = "Đăng Ký VĐV Thi Đấu";
             document.getElementById('submitBtn').innerHTML = `<i class="fa-solid fa-user-plus"></i> Lưu Đăng Ký VĐV`;
@@ -1074,7 +1151,7 @@
             document.getElementById('totalAthletesCount').innerText = window.athletes.length;
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400 italic">Chưa có vận động viên nào.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Chưa có vận động viên nào.</td></tr>`;
                 return;
             }
 
@@ -1084,7 +1161,6 @@
 
             tbody.innerHTML = filtered.map((a, idx) => {
                 const isOwnUnit = window.currentRole === 'admin' || (window.clientUnit && a.unit.toLowerCase() === window.clientUnit.toLowerCase());
-                const categoryText = `${a.eventType || 'Đối kháng'} (${a.subEvent || 'Cá nhân'}) - ${a.weightClass}`;
                 
                 return `
                     <tr class="hover:bg-slate-50 transition ${isOwnUnit && window.currentRole === 'client' ? 'bg-blue-50/40' : ''}">
@@ -1094,15 +1170,17 @@
                         <td class="p-3">
                             <span class="px-2 py-0.5 text-[10px] font-bold rounded ${a.gender === 'Nam' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}">${a.gender}</span>
                         </td>
-                        <td class="p-3 font-bold text-tkd-blue">${categoryText}</td>
-                        ${!(window.currentRole === 'client' && registrationLocked) ? `
-                            <td class="p-3 text-right space-x-1">
-                                ${isOwnUnit && !registrationLocked ? `
-                                    <button onclick="editAthlete('${a.id}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><i class="fa-solid fa-pen"></i></button>
-                                    <button onclick="deleteAthlete('${a.id}')" class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><i class="fa-solid fa-trash"></i></button>
-                                ` : `<span class="text-[10px] text-slate-300 italic"><i class="fa-solid fa-lock"></i> Khóa</span>`}
-                            </td>
-                        ` : ''}
+                        <td class="p-3">
+                            <span class="font-bold text-slate-700">${a.categoryType || 'Đối kháng'}</span> 
+                            <span class="text-[10px] text-slate-500">(${a.subCategory || 'Cá nhân'})</span>
+                        </td>
+                        <td class="p-3 font-bold text-tkd-blue">${a.weightClass || 'N/A'}</td>
+                        <td class="p-3 text-right space-x-1 ${window.currentRole === 'client' && registrationLocked ? 'hidden' : ''}">
+                            ${isOwnUnit && !registrationLocked ? `
+                                <button onclick="editAthlete('${a.id}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><i class="fa-solid fa-pen"></i></button>
+                                <button onclick="deleteAthlete('${a.id}')" class="p-1.5 text-red-600 hover:bg-blue-50 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                            ` : `<span class="text-[10px] text-slate-300 italic"><i class="fa-solid fa-lock"></i> Khóa</span>`}
+                        </td>
                     </tr>
                 `;
             }).join('');
@@ -1119,7 +1197,7 @@
             }
 
             const bracketKey = getBracketKey(gender, weightClass);
-            let eligible = window.athletes.filter(a => a.gender === gender && a.weightClass === weightClass);
+            let eligible = window.athletes.filter(a => a.gender === gender && a.weightClass === weightClass && (!a.categoryType || a.categoryType === 'Đối kháng'));
             if (eligible.length < 2) return false;
 
             eligible = [...eligible].sort(() => Math.random() - 0.5);
@@ -1197,14 +1275,13 @@
         function autoGenerateAllBrackets() {
             let count = 0;
             ['Nam', 'Nữ'].forEach(g => {
-                const activeWeights = (window.weightClasses && window.weightClasses[g]) ? window.weightClasses[g] : [];
-                activeWeights.forEach(w => {
+                (getActiveWeightClasses()[g] || []).forEach(w => {
                     if (generateBracketStructure(g, w)) count++;
                 });
             });
 
             if (count === 0) {
-                alert('Cần ít nhất 2 VĐV ở cùng 1 hạng cân để khởi tạo sơ đồ nhánh!');
+                alert('Cần ít nhất 2 VĐV đối kháng ở cùng 1 hạng cân để khởi tạo sơ đồ nhánh!');
                 return;
             }
 
@@ -1221,7 +1298,7 @@
                 window.saveCloudData();
                 showToast('Đã bốc thăm sơ đồ nhánh mới!');
             } else {
-                alert('Không đủ VĐV ở hạng cân này (Cần ít nhất 2 VĐV)!');
+                alert('Không đủ VĐV đối kháng ở hạng cân này (Cần ít nhất 2 VĐV)!');
             }
         }
 
@@ -1351,6 +1428,10 @@
                 return;
             }
 
+            let isExpired = false;
+            if (window.tournamentDeadline && new Date() > new Date(window.tournamentDeadline)) isExpired = true;
+            const registrationLocked = window.isLocked || isExpired;
+
             tbody.innerHTML = allMatches.map((m) => {
                 const isReady = m.red && m.blue;
                 const isFinished = !!m.winner;
@@ -1374,7 +1455,7 @@
                         <td class="p-3 bg-blue-50/50">${blueName}</td>
                         <td class="p-3 text-center font-black text-slate-900">${m.redScore} - ${m.blueScore}</td>
                         <td class="p-3 text-center">${statusBadge}</td>
-                        <td class="p-3 text-right">
+                        <td class="p-3 text-right ${window.currentRole === 'client' && registrationLocked ? 'hidden' : ''}">
                             ${window.currentRole === 'admin' && isReady ? `
                                 <button onclick="openMatchModal('${m.bracketKey}', '${m.id}')" class="px-3 py-1 bg-tkd-blue hover:bg-blue-700 text-white font-bold rounded-lg text-xs shadow">
                                     Nhập Điểm
@@ -1530,63 +1611,6 @@
             }).join('');
         }
 
-        // --- WEIGHT CLASS CONFIGURATION ---
-        function openWeightConfigModal() {
-            if (window.currentRole !== 'admin') return;
-            document.getElementById('weightConfigModal').classList.remove('hidden');
-            renderWeightConfigList();
-        }
-
-        function closeWeightConfigModal() {
-            document.getElementById('weightConfigModal').classList.add('hidden');
-            updateWeightOptions();
-            updateBracketWeightOptions();
-        }
-
-        function renderWeightConfigList() {
-            const gender = document.getElementById('configGender').value;
-            const container = document.getElementById('weightConfigList');
-            const list = (window.weightClasses && window.weightClasses[gender]) ? window.weightClasses[gender] : [];
-
-            if (list.length === 0) {
-                container.innerHTML = `<span class="text-xs text-slate-400 italic">Chưa có hạng cân nào.</span>`;
-                return;
-            }
-
-            container.innerHTML = list.map(w => `
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 shadow-sm">
-                    ${w}
-                    <button onclick="removeWeightClass('${gender}', '${w}')" class="text-red-500 hover:text-red-700 ml-1"><i class="fa-solid fa-xmark"></i></button>
-                </span>
-            `).join('');
-        }
-
-        function addWeightClass() {
-            const gender = document.getElementById('configGender').value;
-            const val = document.getElementById('newWeightInput').value.trim();
-            if (!val) return;
-
-            if (!window.weightClasses[gender]) window.weightClasses[gender] = [];
-            if (!window.weightClasses[gender].includes(val)) {
-                window.weightClasses[gender].push(val);
-                document.getElementById('newWeightInput').value = '';
-                window.saveCloudData();
-                renderWeightConfigList();
-                showToast(`Đã thêm hạng cân ${val} (${gender})!`);
-            } else {
-                alert('Hạng cân này đã tồn tại!');
-            }
-        }
-
-        function removeWeightClass(gender, weightName) {
-            if (confirm(`Xóa hạng cân ${weightName} của ${gender}?`)) {
-                window.weightClasses[gender] = window.weightClasses[gender].filter(w => w !== weightName);
-                window.saveCloudData();
-                renderWeightConfigList();
-                showToast('Đã xóa hạng cân!', 'error');
-            }
-        }
-
         function openShareModal() {
             document.getElementById('shareModal').classList.remove('hidden');
             generateShareLink();
@@ -1598,9 +1622,8 @@
 
         function generateShareLink() {
             const unitName = document.getElementById('shareUnitInput').value.trim();
-            const baseUrl = "https://phunghoangtr.github.io/qoadepchaivl/";
-            // Dùng đồng thời cả ? và # để GitHub Pages không bị nuốt mất tham số
-            const link = `${baseUrl}?role=client${unitName ? '&unit=' + encodeURIComponent(unitName) : ''}#client`;
+            const baseUrl = window.location.origin + window.location.pathname;
+            const link = `${baseUrl}#role=client${unitName ? '&unit=' + encodeURIComponent(unitName) : ''}`;
             document.getElementById('shareUrlResult').value = link;
         }
 
@@ -1608,25 +1631,25 @@
             const copyText = document.getElementById('shareUrlResult');
             copyText.select();
             document.execCommand('copy');
-            showToast('Đã sao chép đường link đăng ký chuẩn cho GitHub Pages!');
+            showToast('Đã sao chép đường link đăng ký!');
         }
 
         function loadSampleData() {
             if (window.currentRole !== 'admin') return;
             if (confirm('Nạp 12 VĐV mẫu chuẩn cho giải đấu Taekwondo?')) {
                 window.athletes = [
-                    { id: 'VDV-001', fullName: 'Nguyễn Văn An', unit: 'TP. Hồ Chí Minh', gender: 'Nam', eventType: 'Đối kháng', subEvent: 'Cá nhân', weightClass: '-54 kg' },
-                    { id: 'VDV-002', fullName: 'Trần Đình Bình', unit: 'Hà Nội', gender: 'Nam', eventType: 'Đối kháng', subEvent: 'Cá nhân', weightClass: '-54 kg' },
-                    { id: 'VDV-003', fullName: 'Lê Hoàng Cường', unit: 'Đà Nẵng', gender: 'Nam', eventType: 'Đối kháng', subEvent: 'Cá nhân', weightClass: '-54 kg' },
-                    { id: 'VDV-004', fullName: 'Phạm Minh Đức', unit: 'Bình Dương', gender: 'Nam', eventType: 'Đối kháng', subEvent: 'Cá nhân', weightClass: '-54 kg' },
-                    { id: 'VDV-005', fullName: 'Vũ Quốc Hải', unit: 'Hà Nội', gender: 'Nam', eventType: 'Đối kháng', subEvent: 'Đồng đội', weightClass: '-58 kg' },
-                    { id: 'VDV-006', fullName: 'Đặng Thái Sơn', unit: 'TP. Hồ Chí Minh', gender: 'Nam', eventType: 'Đối kháng', subEvent: 'Cá nhân', weightClass: '-58 kg' },
-                    { id: 'VDV-007', fullName: 'Bùi Tuấn Anh', unit: 'Đà Nẵng', gender: 'Nam', eventType: 'Đối kháng', subEvent: 'Cá nhân', weightClass: '-58 kg' },
-                    { id: 'VDV-008', fullName: 'Đỗ Hữu Thắng', unit: 'Cần Thơ', gender: 'Nam', eventType: 'Đối kháng', subEvent: 'Cá nhân', weightClass: '-58 kg' },
-                    { id: 'VDV-009', fullName: 'Nguyễn Thị Hoa', unit: 'TP. Hồ Chí Minh', gender: 'Nữ', eventType: 'Quyền', subEvent: 'Đơn', weightClass: 'Nội dung Quyền' },
-                    { id: 'VDV-010', fullName: 'Trần Mai Lan', unit: 'Hà Nội', gender: 'Nữ', eventType: 'Quyền', subEvent: 'Đôi', weightClass: 'Nội dung Quyền' },
-                    { id: 'VDV-011', fullName: 'Lê Thanh Thúy', unit: 'Bình Dương', gender: 'Nữ', eventType: 'Quyền', subEvent: 'Đồng đội', weightClass: 'Nội dung Quyền' },
-                    { id: 'VDV-012', fullName: 'Phạm Kim Oanh', unit: 'Cần Thơ', gender: 'Đối kháng', subEvent: 'Cá nhân', weightClass: '-46 kg' }
+                    { id: 'VDV-001', fullName: 'Nguyễn Văn An', unit: 'TP. Hồ Chí Minh', gender: 'Nam', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-54 kg' },
+                    { id: 'VDV-002', fullName: 'Trần Đình Bình', unit: 'Hà Nội', gender: 'Nam', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-54 kg' },
+                    { id: 'VDV-003', fullName: 'Lê Hoàng Cường', unit: 'Đà Nẵng', gender: 'Nam', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-54 kg' },
+                    { id: 'VDV-004', fullName: 'Phạm Minh Đức', unit: 'Bình Dương', gender: 'Nam', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-54 kg' },
+                    { id: 'VDV-005', fullName: 'Vũ Quốc Hải', unit: 'Hà Nội', gender: 'Nam', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-58 kg' },
+                    { id: 'VDV-006', fullName: 'Đặng Thái Sơn', unit: 'TP. Hồ Chí Minh', gender: 'Nam', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-58 kg' },
+                    { id: 'VDV-007', fullName: 'Bùi Tuấn Anh', unit: 'Đà Nẵng', gender: 'Nam', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-58 kg' },
+                    { id: 'VDV-008', fullName: 'Đỗ Hữu Thắng', unit: 'Cần Thơ', gender: 'Nam', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-58 kg' },
+                    { id: 'VDV-009', fullName: 'Nguyễn Thị Hoa', unit: 'TP. Hồ Chí Minh', gender: 'Nữ', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-46 kg' },
+                    { id: 'VDV-010', fullName: 'Trần Mai Lan', unit: 'Hà Nội', gender: 'Nữ', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-46 kg' },
+                    { id: 'VDV-011', fullName: 'Lê Thanh Thúy', unit: 'Bình Dương', gender: 'Nữ', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-46 kg' },
+                    { id: 'VDV-012', fullName: 'Phạm Kim Oanh', unit: 'Cần Thơ', gender: 'Nữ', categoryType: 'Đối kháng', subCategory: 'Cá nhân', weightClass: '-46 kg' }
                 ];
                 window.brackets = {};
                 window.isLocked = false;
@@ -1642,6 +1665,7 @@
                 window.brackets = {};
                 window.isLocked = false;
                 window.tournamentDeadline = '';
+                window.customWeightClasses = null;
                 window.saveCloudData();
                 showToast('Đã làm sạch dữ liệu giải đấu!', 'error');
             }
