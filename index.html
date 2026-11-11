@@ -57,16 +57,23 @@
 
             <!-- Global Admin Actions -->
             <div id="adminGlobalControls" class="flex items-center space-x-2 flex-wrap gap-2">
-                <div class="flex items-center bg-slate-800/80 px-2 py-1 rounded-xl border border-slate-700 text-xs gap-1.5">
-                    <span class="text-slate-400 font-semibold"><i class="fa-regular fa-clock"></i> Hạn cuối:</span>
-                    <input type="datetime-local" id="deadlineInput" onchange="saveDeadline()" class="bg-slate-900 text-white px-2 py-1 rounded border border-slate-600 text-xs">
+                <!-- Cài đặt hạn chót ở Admin -->
+                <div class="flex items-center bg-slate-800/90 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs gap-2">
+                    <span class="text-slate-300 font-bold"><i class="fa-regular fa-clock text-yellow-400"></i> Hạn chót:</span>
+                    <input type="datetime-local" id="deadlineInput" class="bg-slate-900 text-white px-2 py-1 rounded border border-slate-600 text-xs font-semibold focus:outline-none">
+                    <button onclick="confirmDeadline()" class="bg-yellow-500 hover:bg-yellow-600 text-slate-900 font-extrabold px-2 py-1 rounded text-xs transition">Xác nhận</button>
                 </div>
+
                 <button onclick="toggleLockRegistration()" id="lockBtn" class="bg-amber-600 hover:bg-amber-700 text-xs font-bold text-white py-2 px-3 rounded-xl transition flex items-center gap-1.5">
                     <i class="fa-solid fa-lock-open"></i> Đang mở Đăng Ký
                 </button>
-                <button onclick="loadSampleData()" class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white py-2 px-3 rounded-xl transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Dữ Liệu Mẫu
-                </button>
+
+                <!-- Nút nhập File danh sách từ các đoàn gửi về -->
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white py-2 px-3 rounded-xl transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-file-import"></i> Nhập File Đăng Ký
+                    <input type="file" id="importJsonInput" accept=".json" onchange="importAthleteData(event)" class="hidden">
+                </label>
+
                 <button onclick="resetAllData()" class="bg-red-600 hover:bg-red-700 text-xs font-semibold text-white py-2 px-3 rounded-xl transition" title="Xóa toàn bộ">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
@@ -109,9 +116,27 @@
 
         <!-- ================= TAB 1: ĐĂNG KÝ VĐV ================= -->
         <section id="view-register" class="tab-content space-y-6">
-            <div id="lockedWarning" class="hidden bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm font-semibold flex items-center gap-3">
-                <i class="fa-solid fa-triangle-exclamation text-amber-600 text-lg"></i>
-                <span id="lockWarningText">Cổng đăng ký đã đóng hoặc quá hạn. Bạn chỉ có thể xem danh sách hiện tại.</span>
+            
+            <!-- Banner Thông Báo Hạn Chót Dành Cho Khách/Client -->
+            <div id="deadlineNoticeBanner" class="bg-blue-50 border border-blue-200 text-blue-900 p-4 rounded-2xl flex items-center justify-between flex-wrap gap-3 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-clock text-tkd-blue text-2xl"></i>
+                    <div>
+                        <h4 class="font-bold text-sm uppercase">Thời Hạn Đăng Ký Giải Đấu</h4>
+                        <p class="text-xs text-slate-600" id="deadlineNoticeText">Chưa thiết lập hạn chót đăng ký.</p>
+                    </div>
+                </div>
+                <div id="exportActionForClient" class="hidden">
+                    <button onclick="exportUnitData()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-md">
+                        <i class="fa-solid fa-file-export"></i> Bấm Xuất File Danh Sách Đã Đăng Ký
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cảnh Báo Khi Hết Hạn / Đã Khóa Cổng -->
+            <div id="lockedWarning" class="hidden bg-red-50 border-2 border-red-300 text-red-800 p-4 rounded-2xl text-sm font-bold flex items-center gap-3 shadow-md">
+                <i class="fa-solid fa-circle-xmark text-red-600 text-2xl"></i>
+                <span id="lockWarningText">CỔNG ĐĂNG KÝ ĐÃ HẾT HẠN HOẶC ĐÃ BỊ KHÓA LẠI! Bạn không thể gửi thêm hoặc sửa thông tin.</span>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -128,7 +153,7 @@
                         <input type="hidden" id="athleteId">
                         
                         <div>
-                            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Họ và Tên VĐV (hoặc Tên Nhóm) *</label>
+                            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Họ và Tên VĐV (hoặc Tên Đội) *</label>
                             <input type="text" id="fullName" required placeholder="Nguyễn Văn An (hoặc Đội 1...)" class="w-full px-3.5 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-tkd-blue">
                         </div>
 
@@ -347,7 +372,7 @@
                 <h2 class="font-bold text-lg text-slate-800 flex items-center gap-2">
                     <i class="fa-solid fa-link text-tkd-blue"></i> Tạo & Quản Lý Link Đăng Ký Riêng Cho Từng Đơn Vị
                 </h2>
-                <p class="text-xs text-slate-500">Mỗi đơn vị sẽ có một đường link riêng biệt. Khi họ đăng ký, dữ liệu sẽ tự động đồng bộ về file tổng quản lý của bạn.</p>
+                <p class="text-xs text-slate-500">Mỗi đơn vị sẽ có một đường link riêng biệt. Các đơn vị đăng ký xong bấm xuất file gửi về cho Admin để nạp vào hệ thống.</p>
 
                 <div class="flex gap-2 max-w-md">
                     <input type="text" id="newUnitNameInput" placeholder="Nhập tên đơn vị mới (Ví dụ: Đơn vị A)..." class="flex-grow px-3 py-2 text-sm border border-slate-300 rounded-xl">
@@ -408,26 +433,22 @@
     </div>
 
     <script>
-        // Dynamic Sub-categories
         const SUB_CATEGORIES = {
             "Đối kháng": ["Đơn", "Đồng đội"],
             "Quyền": ["Đơn", "Đôi", "Đồng đội"]
         };
 
-        // Default Weight Classes
         let weightClasses = JSON.parse(localStorage.getItem('tkd_spa_weightClasses')) || {
             "Nam": ["-54 kg", "-58 kg", "-63 kg", "-68 kg", "-74 kg", "-80 kg", "-87 kg", "+87 kg"],
             "Nữ": ["-46 kg", "-49 kg", "-53 kg", "-57 kg", "-62 kg", "-67 kg", "-73 kg", "+73 kg"]
         };
 
-        // State Data
         let athletes = JSON.parse(localStorage.getItem('tkd_spa_athletes')) || [];
         let brackets = JSON.parse(localStorage.getItem('tkd_spa_brackets')) || {};
         let unitsList = JSON.parse(localStorage.getItem('tkd_spa_units')) || [];
         let isLocked = JSON.parse(localStorage.getItem('tkd_spa_locked')) || false;
         let registrationDeadline = localStorage.getItem('tkd_spa_deadline') || '';
 
-        // URL Params
         const urlParams = new URLSearchParams(window.location.search);
         const clientUnit = urlParams.get('unit');
         const isAdmin = !clientUnit;
@@ -447,24 +468,52 @@
             if (registrationDeadline) {
                 document.getElementById('deadlineInput').value = registrationDeadline;
             }
+            updateDeadlineUI();
         });
+
+        // Hạn chót & Kiểm tra trạng thái
+        function confirmDeadline() {
+            const val = document.getElementById('deadlineInput').value;
+            if(!val) return alert('Vui lòng chọn thời gian hạn chót!');
+            registrationDeadline = val;
+            localStorage.setItem('tkd_spa_deadline', registrationDeadline);
+            checkDeadlineStatus();
+            updateDeadlineUI();
+            showToast('Đã xác nhận thời gian hạn chót!');
+        }
 
         function checkDeadlineStatus() {
             if (registrationDeadline) {
                 const now = new Date();
                 const deadlineDate = new Date(registrationDeadline);
-                if (now > deadlineDate && !isLocked && isAdmin) {
+                if (now > deadlineDate) {
                     isLocked = true;
-                    saveData();
                 }
             }
         }
 
-        function saveDeadline() {
-            registrationDeadline = document.getElementById('deadlineInput').value;
-            localStorage.setItem('tkd_spa_deadline', registrationDeadline);
-            checkDeadlineStatus();
-            showToast('Đã cập nhật hạn cuối đăng ký!');
+        function updateDeadlineUI() {
+            const noticeText = document.getElementById('deadlineNoticeText');
+            const lockedDiv = document.getElementById('lockedWarning');
+            const formCard = document.getElementById('registrationFormCard');
+
+            if (registrationDeadline) {
+                const d = new Date(registrationDeadline);
+                const formattedTime = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')} ngày ${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                noticeText.innerText = `Cổng đăng ký sẽ tự động đóng vào lúc: ${formattedTime}`;
+            } else {
+                noticeText.innerText = `Chưa thiết lập hạn chót đăng ký.`;
+            }
+
+            if (isLocked) {
+                lockedDiv.classList.remove('hidden');
+                if(!isAdmin) {
+                    formCard.classList.add('hidden');
+                }
+            } else {
+                lockedDiv.classList.add('hidden');
+                formCard.classList.remove('hidden');
+            }
         }
 
         function applyRolePermissions() {
@@ -473,18 +522,12 @@
                 document.getElementById('subHeaderDesc').innerText = `Cổng đăng ký vận động viên riêng của đoàn ${clientUnit}`;
                 document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
                 document.getElementById('adminGlobalControls').classList.add('hidden');
+                document.getElementById('exportActionForClient').classList.remove('hidden');
                 
                 const unitInput = document.getElementById('unit');
                 unitInput.value = clientUnit;
                 unitInput.readOnly = true;
                 unitInput.classList.add('bg-slate-100', 'cursor-not-allowed');
-
-                if (isLocked) {
-                    document.getElementById('registrationFormCard').classList.add('hidden');
-                    const warningDiv = document.getElementById('lockedWarning');
-                    warningDiv.classList.remove('hidden');
-                    document.getElementById('lockWarningText').innerText = 'Cổng đăng ký đã bị khóa hoặc đã quá hạn. Bạn chỉ có thể xem danh sách VĐV hiện tại.';
-                }
             } else {
                 if (isLocked) {
                     document.getElementById('lockBtn').innerHTML = `<i class="fa-solid fa-lock"></i> Đã Khóa Đăng Ký`;
@@ -566,6 +609,7 @@
             }
         }
 
+        // --- CẤU HÌNH HẠNG CÂN ---
         function renderWeightConfigUI() {
             ['Nam', 'Nữ'].forEach(gender => {
                 const containerId = gender === 'Nam' ? 'listWeightNam' : 'listWeightNu';
@@ -603,10 +647,12 @@
             }
         }
 
+        // --- ĐĂNG KÝ VĐV ---
         function handleSaveAthlete(e) {
             e.preventDefault();
+            checkDeadlineStatus();
             if (isLocked && !isAdmin) {
-                alert('Cổng đăng ký đã bị khóa, không thể thêm/sửa vận động viên!');
+                alert('Cổng đăng ký đã bị khóa hoặc hết hạn!');
                 return;
             }
 
@@ -621,11 +667,11 @@
             const existingIdx = athletes.findIndex(a => a.id === id);
             if (existingIdx !== -1) {
                 athletes[existingIdx] = { id, fullName, unit, categoryType, subCategory, gender, weightClass };
-                showToast('Đã cập nhật thông tin thành công!');
+                showToast('Đã cập nhật thông tin!');
             } else {
                 athletes.push({ id, fullName, unit, categoryType, subCategory, gender, weightClass });
                 if (!unitsList.includes(unit)) unitsList.push(unit);
-                showToast('Đăng ký mới thành công!');
+                showToast('Đăng ký VĐV thành công!');
             }
 
             saveData();
@@ -636,10 +682,7 @@
         }
 
         function editAthlete(id) {
-            if (isLocked && !isAdmin) {
-                alert('Cổng đăng ký đã khóa, không thể chỉnh sửa!');
-                return;
-            }
+            if (isLocked && !isAdmin) return alert('Cổng đăng ký đã khóa!');
             const item = athletes.find(a => a.id === id);
             if (!item) return;
             document.getElementById('athleteId').value = item.id;
@@ -657,20 +700,14 @@
         }
 
         function deleteAthlete(id) {
-            if (isLocked && !isAdmin) {
-                alert('Cổng đăng ký đã khóa, không thể xóa!');
-                return;
-            }
+            if (isLocked && !isAdmin) return alert('Cổng đăng ký đã khóa!');
             const item = athletes.find(a => a.id === id);
             if (!item) return;
-            if (!isAdmin && item.unit !== clientUnit) {
-                alert('Bạn không có quyền xóa dữ liệu của đơn vị khác!');
-                return;
-            }
+            if (!isAdmin && item.unit !== clientUnit) return alert('Bạn không thể xóa VĐV đoàn khác!');
             if (confirm('Xóa thông tin này?')) {
                 athletes = athletes.filter(a => a.id !== id);
                 saveData();
-                showToast('Đã xóa thành công!');
+                showToast('Đã xóa!');
             }
         }
 
@@ -682,18 +719,16 @@
             const filtered = athletes.filter(a => 
                 a.fullName.toLowerCase().includes(searchKey) || 
                 a.unit.toLowerCase().includes(searchKey) ||
-                (a.categoryType && a.categoryType.toLowerCase().includes(searchKey)) ||
-                (a.subCategory && a.subCategory.toLowerCase().includes(searchKey)) ||
-                (a.weightClass && a.weightClass.toLowerCase().includes(searchKey))
+                (a.categoryType && a.categoryType.toLowerCase().includes(searchKey))
             );
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Chưa có đăng ký nào.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 italic">Chưa có dữ liệu.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = filtered.map((a, idx) => `
-                <tr class="hover:bg-slate-50 transition">
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100">
                     <td class="p-3 text-slate-400 font-semibold">${idx + 1}</td>
                     <td class="p-3 font-bold text-slate-800">${a.fullName}</td>
                     <td class="p-3 text-tkd-blue font-semibold">${a.unit}</td>
@@ -710,6 +745,52 @@
             `).join('');
         }
 
+        // --- XUẤT & NHẬP FILE DỮ LIỆU ĐĂNG KÝ ONLINE ---
+        function exportUnitData() {
+            let dataToExport = athletes;
+            if(clientUnit) {
+                dataToExport = athletes.filter(a => a.unit === clientUnit);
+            }
+            if(dataToExport.length === 0) return alert('Chưa có VĐV nào trong danh sách để xuất file!');
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `DanhSach_DangKy_${clientUnit || 'Tong'}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importAthleteData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedAthletes = JSON.parse(e.target.result);
+                    if(!Array.isArray(importedAthletes)) throw new Error('Cấu trúc file không đúng!');
+
+                    let addedCount = 0;
+                    importedAthletes.forEach(imp => {
+                        if(!athletes.some(a => a.id === imp.id)) {
+                            athletes.push(imp);
+                            if(imp.unit && !unitsList.includes(imp.unit)) unitsList.push(imp.unit);
+                            addedCount++;
+                        }
+                    });
+
+                    saveData();
+                    showToast(`Đã nhập thành công ${addedCount} VĐV vào hệ thống!`);
+                } catch (err) {
+                    alert('Lỗi: File JSON không hợp lệ!');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- SƠ ĐỒ & BẢNG ĐẤU ---
         function getBracketKey(g, w) { return `${g}_${w}`.replace(/\s+/g, '_'); }
 
         function generateSingleBracket() {
@@ -717,7 +798,7 @@
             const weightClass = document.getElementById('bracketWeightClass').value;
             const bracketKey = getBracketKey(gender, weightClass);
             let eligible = athletes.filter(a => (a.categoryType !== 'Quyền') && a.gender === gender && a.weightClass === weightClass);
-            if (eligible.length < 2) return alert('Cần ít nhất 2 VĐV đối kháng ở hạng cân này để bốc thăm sơ đồ nhánh!');
+            if (eligible.length < 2) return alert('Cần ít nhất 2 VĐV đối kháng ở hạng cân này!');
 
             eligible.sort(() => Math.random() - 0.5);
             let size = eligible.length > 4 ? 8 : (eligible.length > 2 ? 4 : 2);
@@ -729,13 +810,7 @@
                 let red = eligible[i * 2] || null;
                 let blue = eligible[i * 2 + 1] || null;
                 let winner = (red && !blue) ? red : ((!red && blue) ? blue : null);
-                let winType = winner ? 'Bye' : '';
-                let m = { 
-                    id: `${bracketKey}_M${matchCounter}`, 
-                    code: `M${matchCounter++}`, 
-                    round: 1, 
-                    red, blue, redScore: 0, blueScore: 0, winner, winType, nextMatchId: null 
-                };
+                let m = { id: `${bracketKey}_M${matchCounter}`, code: `M${matchCounter++}`, round: 1, red, blue, redScore: 0, blueScore: 0, winner, winType: winner ? 'Bye' : '', nextMatchId: null };
                 r1.push(m); matches.push(m);
             }
 
@@ -743,23 +818,15 @@
             while(prev.length > 1) {
                 let curr = [];
                 for (let i = 0; i < prev.length; i += 2) {
-                    let m = { 
-                        id: `${bracketKey}_M${matchCounter}`, 
-                        code: `M${matchCounter++}`, 
-                        round: r, 
-                        red: prev[i].winner, 
-                        blue: prev[i+1]?.winner || null, 
-                        redScore: 0, blueScore: 0, winner: null, winType: '', nextMatchId: null 
-                    };
-                    prev[i].nextMatchId = m.id; 
-                    if(prev[i+1]) prev[i+1].nextMatchId = m.id;
+                    let m = { id: `${bracketKey}_M${matchCounter}`, code: `M${matchCounter++}`, round: r, red: prev[i].winner, blue: prev[i+1]?.winner || null, redScore: 0, blueScore: 0, winner: null, winType: '', nextMatchId: null };
+                    prev[i].nextMatchId = m.id; if(prev[i+1]) prev[i+1].nextMatchId = m.id;
                     curr.push(m); matches.push(m);
                 }
                 prev = curr; r++;
             }
             brackets[bracketKey] = { gender, weightClass, matches };
             saveData();
-            showToast('Đã bốc thăm sơ đồ nhánh thành công!');
+            showToast('Đã bốc thăm nhánh thành công!');
         }
 
         function renderBracketDisplay() {
@@ -773,7 +840,7 @@
             document.getElementById('bracketTitle').innerText = `HẠNG CÂN: ${weightClass}`;
 
             if (!bData || !bData.matches || bData.matches.length === 0) {
-                container.innerHTML = `<div class="text-slate-400 italic py-6">Chưa có sơ đồ nhánh cho hạng cân này. Vui lòng bấm nút "Bốc Thăm Hạng Này" (Dành cho Admin).</div>`;
+                container.innerHTML = `<div class="text-slate-400 italic py-6">Chưa có sơ đồ nhánh. Vui lòng bấm Bốc Thăm.</div>`;
                 return;
             }
 
@@ -803,7 +870,7 @@
                         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden text-xs relative bracket-node">
                             <div class="bg-slate-900 text-white px-3 py-1 flex justify-between items-center font-bold">
                                 <span>Trận: <span class="text-yellow-400">${m.code}</span></span>
-                                ${isAdmin ? `<button onclick="openMatchModal('${bracketKey}', '${m.id}')" class="bg-tkd-blue hover:bg-blue-600 px-2 py-0.5 rounded text-[10px]"><i class="fa-solid fa-pen-to-square"></i> Nhập tỷ số</button>` : ''}
+                                ${isAdmin ? `<button onclick="openMatchModal('${bracketKey}', '${m.id}')" class="bg-tkd-blue hover:bg-blue-600 px-2 py-0.5 rounded text-[10px]"><i class="fa-solid fa-pen-to-square"></i> Sửa tỷ số</button>` : ''}
                             </div>
                             <div class="divide-y divide-slate-100 font-medium">
                                 <div class="p-2 flex justify-between items-center ${isRedWin ? 'bg-red-50 font-bold text-red-700' : ''}">
@@ -838,7 +905,7 @@
             });
 
             if (allMatches.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 italic">Chưa có trận đấu nào được tạo. Hãy vào tab Sơ Đồ để bốc thăm.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400 italic">Chưa có trận đấu nào được tạo.</td></tr>`;
                 return;
             }
 
@@ -847,28 +914,17 @@
                 const blueName = m.blue ? `${m.blue.fullName} (${m.blue.unit})` : 'Chờ xác định';
                 const isRedWin = m.winner && m.winner.id === m.red?.id;
                 const isBlueWin = m.winner && m.winner.id === m.blue?.id;
-                let roundName = `Vòng ${m.round}`;
-                if(m.round === 2 && allMatches.filter(x => x.bracketKey === m.bracketKey && x.round === 2).length <= 2) roundName = 'Bán Kết';
-                if(!m.nextMatchId && m.round > 1) roundName = 'Chung Kết';
 
                 return `
-                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                    <tr class="hover:bg-slate-50 border-b border-slate-100">
                         <td class="p-3 text-center font-black text-tkd-blue">${m.code}</td>
                         <td class="p-3 font-bold">[${m.gender}] ${m.weightClass}</td>
-                        <td class="p-3 text-slate-600">${roundName}</td>
-                        <td class="p-3 bg-red-50/40 text-red-900 font-bold ${isRedWin ? 'bg-red-100 ring-1 ring-red-400' : ''}">
-                            <div class="flex items-center gap-1.5"><i class="fa-solid fa-square text-red-600"></i> ${redName}</div>
-                        </td>
-                        <td class="p-3 bg-blue-50/40 text-blue-900 font-bold ${isBlueWin ? 'bg-blue-100 ring-1 ring-blue-400' : ''}">
-                            <div class="flex items-center gap-1.5"><i class="fa-solid fa-square text-blue-600"></i> ${blueName}</div>
-                        </td>
+                        <td class="p-3 text-slate-600">Vòng ${m.round}</td>
+                        <td class="p-3 bg-red-50/40 text-red-900 font-bold ${isRedWin ? 'bg-red-100 ring-1 ring-red-400' : ''}">${redName}</td>
+                        <td class="p-3 bg-blue-50/40 text-blue-900 font-bold ${isBlueWin ? 'bg-blue-100 ring-1 ring-blue-400' : ''}">${blueName}</td>
                         <td class="p-3 text-center font-black text-sm">${m.redScore} - ${m.blueScore}</td>
-                        <td class="p-3 text-center">
-                            ${m.winner ? `<span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-[10px] font-black uppercase"><i class="fa-solid fa-check"></i> ${m.winner.fullName}</span>` : `<span class="text-amber-600 font-semibold text-[10px]">Đang đấu / Chưa đá</span>`}
-                        </td>
-                        <td class="p-3 text-right admin-only">
-                            <button onclick="openMatchModal('${m.bracketKey}', '${m.id}')" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-2.5 py-1 rounded font-bold"><i class="fa-solid fa-pen"></i></button>
-                        </td>
+                        <td class="p-3 text-center">${m.winner ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">${m.winner.fullName}</span>` : `<span class="text-amber-600 text-[10px]">Chưa đấu</span>`}</td>
+                        <td class="p-3 text-right admin-only"><button onclick="openMatchModal('${m.bracketKey}', '${m.id}')" class="bg-slate-100 px-2 py-1 rounded font-bold"><i class="fa-solid fa-pen"></i></button></td>
                     </tr>
                 `;
             }).join('');
@@ -877,8 +933,7 @@
         function openMatchModal(bracketKey, matchId) {
             const b = brackets[bracketKey];
             const m = b.matches.find(x => x.id === matchId);
-            if(!m) return;
-            if(!m.red || !m.blue) return alert('Trận đấu này chưa đủ 2 vận động viên để nhập tỷ số!');
+            if(!m || !m.red || !m.blue) return alert('Chưa đủ 2 VĐV!');
 
             document.getElementById('modalBracketKey').value = bracketKey;
             document.getElementById('modalMatchId').value = matchId;
@@ -897,42 +952,31 @@
             document.getElementById('matchModal').classList.remove('hidden');
         }
 
-        function closeMatchModal() {
-            document.getElementById('matchModal').classList.add('hidden');
-        }
+        function closeMatchModal() { document.getElementById('matchModal').classList.add('hidden'); }
 
         function saveMatchResult(e) {
             e.preventDefault();
             const bKey = document.getElementById('modalBracketKey').value;
             const mId = document.getElementById('modalMatchId').value;
-            const redScore = parseInt(document.getElementById('modalRedScore').value) || 0;
-            const blueScore = parseInt(document.getElementById('modalBlueScore').value) || 0;
-            const winnerSide = document.getElementById('modalWinner').value;
-
             const b = brackets[bKey];
             const m = b.matches.find(x => x.id === mId);
-            if(!m) return;
 
-            m.redScore = redScore;
-            m.blueScore = blueScore;
-            m.winner = winnerSide === 'red' ? m.red : m.blue;
+            m.redScore = parseInt(document.getElementById('modalRedScore').value) || 0;
+            m.blueScore = parseInt(document.getElementById('modalBlueScore').value) || 0;
+            m.winner = document.getElementById('modalWinner').value === 'red' ? m.red : m.blue;
 
             if(m.nextMatchId) {
                 const nextM = b.matches.find(x => x.id === m.nextMatchId);
                 if(nextM) {
-                    const sameRoundMatches = b.matches.filter(x => x.round === m.round);
-                    const idx = sameRoundMatches.findIndex(x => x.id === m.id);
-                    if(idx % 2 === 0) {
-                        nextM.red = m.winner;
-                    } else {
-                        nextM.blue = m.winner;
-                    }
+                    const sameRound = b.matches.filter(x => x.round === m.round);
+                    const idx = sameRound.findIndex(x => x.id === m.id);
+                    if(idx % 2 === 0) nextM.red = m.winner;
+                    else nextM.blue = m.winner;
                 }
             }
-
             saveData();
             closeMatchModal();
-            showToast('Đã cập nhật kết quả trận đấu và đôn vòng!');
+            showToast('Đã lưu kết quả!');
         }
 
         function renderMedalTally() {
@@ -941,63 +985,44 @@
 
             Object.keys(brackets).forEach(bKey => {
                 const b = brackets[bKey];
-                const finalMatches = b.matches.filter(m => !m.nextMatchId);
-                finalMatches.forEach(fm => {
+                const finals = b.matches.filter(m => !m.nextMatchId);
+                finals.forEach(fm => {
                     if (fm.winner) {
-                        const goldUnit = fm.winner.unit;
-                        const silverUnit = (fm.winner.id === fm.red?.id) ? fm.blue?.unit : fm.red?.unit;
-                        if(goldUnit && tally[goldUnit]) tally[goldUnit].gold++;
-                        if(silverUnit && tally[silverUnit]) tally[silverUnit].silver++;
+                        const g = fm.winner.unit;
+                        const s = (fm.winner.id === fm.red?.id) ? fm.blue?.unit : fm.red?.unit;
+                        if(g && tally[g]) tally[g].gold++;
+                        if(s && tally[s]) tally[s].silver++;
                     }
                 });
-
-                const semiMatches = b.matches.filter(m => {
-                    const next = b.matches.find(x => x.id === m.nextMatchId);
-                    return next && !next.nextMatchId;
-                });
-                semiMatches.forEach(sm => {
-                    if(sm.red && sm.winner && sm.red.id !== sm.winner.id) {
-                        if(sm.red.unit && tally[sm.red.unit]) tally[sm.red.unit].bronze++;
-                    }
-                    if(sm.blue && sm.winner && sm.blue.id !== sm.winner.id) {
-                        if(sm.blue.unit && tally[sm.blue.unit]) tally[sm.blue.unit].bronze++;
-                    }
-                });
-            });
-
-            const sortedTally = Object.values(tally).sort((a, b) => {
-                if (b.gold !== a.gold) return b.gold - a.gold;
-                if (b.silver !== a.silver) return b.silver - a.silver;
-                return b.bronze - a.bronze;
             });
 
             const tbody = document.getElementById('medalTallyBody');
-            tbody.innerHTML = sortedTally.map((item, idx) => `
+            tbody.innerHTML = Object.values(tally).map((item, idx) => `
                 <tr class="hover:bg-slate-50 border-b border-slate-100">
                     <td class="p-3.5 text-center font-bold text-slate-500">${idx + 1}</td>
                     <td class="p-3.5 font-bold text-slate-800">${item.unit}</td>
-                    <td class="p-3.5 text-center text-yellow-600 font-black text-base">${item.gold}</td>
+                    <td class="p-3.5 text-center text-yellow-600 font-black">${item.gold}</td>
                     <td class="p-3.5 text-center text-slate-500 font-bold">${item.silver}</td>
                     <td class="p-3.5 text-center text-amber-700 font-bold">${item.bronze}</td>
                     <td class="p-3.5 text-center font-black">${item.gold + item.silver + item.bronze}</td>
                 </tr>
-            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">Chưa có dữ liệu huy chương</td></tr>`;
+            `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">Chưa có dữ liệu.</td></tr>`;
         }
 
         function generateUnitLink() {
             const uName = document.getElementById('newUnitNameInput').value.trim();
-            if (!uName) return alert('Vui lòng nhập tên đơn vị!');
+            if (!uName) return alert('Nhập tên đơn vị!');
             if (!unitsList.includes(uName)) unitsList.push(uName);
             saveData();
             document.getElementById('newUnitNameInput').value = '';
-            showToast('Đã tạo link đơn vị thành công!');
+            showToast('Đã tạo link!');
         }
 
         function deleteUnitLink(uName) {
             if(confirm(`Xóa link đơn vị "${uName}"?`)) {
                 unitsList = unitsList.filter(u => u !== uName);
                 saveData();
-                showToast('Đã xóa đơn vị!');
+                showToast('Đã xóa!');
             }
         }
 
@@ -1007,7 +1032,7 @@
             const baseUrl = window.location.href.split('?')[0];
 
             if (unitsList.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-400 italic">Chưa có link đơn vị nào. Nhập tên đơn vị ở trên để tạo link mới.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-slate-400 italic">Chưa có link đơn vị nào.</td></tr>`;
                 return;
             }
 
@@ -1018,8 +1043,8 @@
                         <td class="p-3 font-bold text-slate-800">${u}</td>
                         <td class="p-3 text-blue-600 truncate max-w-xs"><a href="${link}" target="_blank" class="hover:underline">${link}</a></td>
                         <td class="p-3 text-right space-x-1">
-                            <button onclick="navigator.clipboard.writeText('${link}'); showToast('Đã copy link vào bộ nhớ tạm!');" class="bg-slate-100 hover:bg-slate-200 px-2.5 py-1 rounded font-bold text-slate-700 text-xs">Copy Link</button>
-                            <button onclick="deleteUnitLink('${u}')" class="bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded font-bold text-xs" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                            <button onclick="navigator.clipboard.writeText('${link}'); showToast('Đã copy link!');" class="bg-slate-100 px-2 py-1 rounded font-bold text-xs">Copy Link</button>
+                            <button onclick="deleteUnitLink('${u}')" class="bg-red-50 text-red-600 px-2 py-1 rounded font-bold text-xs"><i class="fa-solid fa-trash"></i></button>
                         </td>
                     </tr>
                 `;
@@ -1032,19 +1057,8 @@
             location.reload();
         }
 
-        function loadSampleData() {
-            athletes = [
-                { id: '1', fullName: 'Nguyễn Văn An', unit: 'Đơn vị A', categoryType: 'Đối kháng', subCategory: 'Đơn', gender: 'Nam', weightClass: '-54 kg' },
-                { id: '2', fullName: 'Trần Đình Bình', unit: 'Đơn vị B', categoryType: 'Đối kháng', subCategory: 'Đơn', gender: 'Nam', weightClass: '-54 kg' },
-                { id: '3', fullName: 'Đội Quyền Đôi Nam Nữ 1', unit: 'Đơn vị A', categoryType: 'Quyền', subCategory: 'Đôi', gender: 'Nam Nữ', weightClass: 'N/A' }
-            ];
-            unitsList = ["Đơn vị A", "Đơn vị B"];
-            saveData();
-            showToast('Đã nạp dữ liệu mẫu!');
-        }
-
         function resetAllData() {
-            if(confirm('Bạn có chắc chắn muốn xóa toàn bộ dữ liệu giải đấu?')) {
+            if(confirm('Xóa toàn bộ dữ liệu hệ thống?')) {
                 localStorage.clear();
                 location.reload();
             }
