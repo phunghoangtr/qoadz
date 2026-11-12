@@ -66,9 +66,13 @@
                         <input type="text" id="tournamentCodeInput" onchange="saveTournamentCode()" placeholder="Tên Giải (VD: GiaiTKD_2026)" class="bg-slate-800 text-yellow-400 font-black text-sm px-2 py-1 rounded border border-slate-600 focus:outline-none w-52">
                         <span id="roleBadge" class="bg-yellow-400 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">Admin BTC</span>
                     </div>
+
                     <p id="subHeaderDesc" class="text-xs text-slate-300 font-medium mt-1">Hệ thống quản lý bốc thăm và sơ đồ thi đấu Taekwondo</p>
                 </div>
-            </div>
+           <button onclick="exportFullTournamentData()" class="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold text-white py-2 px-3 rounded-xl transition flex items-center gap-1.5">
+    <i class="fa-solid fa-download"></i> Tải Toàn Bộ Dữ Liệu
+</button>
+		   </div>
 
             <!-- Global Admin Actions -->
             <div id="adminGlobalControls" class="flex items-center space-x-2 flex-wrap gap-2">
@@ -1449,6 +1453,26 @@
                 </tr>
             `).join('');
         }
+		function exportFullTournamentData() {
+    const fullData = {
+        tournamentCode: tournamentCode,
+        athletes: athletes,
+        brackets: brackets,
+        units: unitsList,
+        courtAssignments: courtAssignments,
+        weightClasses: weightClasses,
+        locked: isLocked,
+        deadline: registrationDeadline
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullData, null, 2));
+    const dl = document.createElement('a');
+    dl.setAttribute("href", dataStr);
+    dl.setAttribute("download", `${tournamentCode}_FullData.json`);
+    document.body.appendChild(dl);
+    dl.click();
+    dl.remove();
+    showToast('Đã tải toàn bộ dữ liệu giải đấu về máy!');
+}
     </script>
     
 </body>
