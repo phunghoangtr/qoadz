@@ -1454,25 +1454,137 @@
             `).join('');
         }
 		function exportFullTournamentData() {
-    const fullData = {
-        tournamentCode: tournamentCode,
-        athletes: athletes,
-        brackets: brackets,
-        units: unitsList,
-        courtAssignments: courtAssignments,
-        weightClasses: weightClasses,
-        locked: isLocked,
-        deadline: registrationDeadline
-    };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullData, null, 2));
-    const dl = document.createElement('a');
-    dl.setAttribute("href", dataStr);
-    dl.setAttribute("download", `${tournamentCode}_FullData.json`);
-    document.body.appendChild(dl);
-    dl.click();
-    dl.remove();
-    showToast('Đã tải toàn bộ dữ liệu giải đấu về máy!');
-}
+            const fullData = {
+                tournamentCode: tournamentCode,
+                athletes: athletes,
+                brackets: brackets,
+                units: unitsList,
+                courtAssignments: courtAssignments,
+                weightClasses: weightClasses,
+                locked: isLocked,
+                deadline: registrationDeadline
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullData, null, 2));
+            const dl = document.createElement('a');
+            dl.setAttribute("href", dataStr);
+            dl.setAttribute("download", `${tournamentCode}_FullData.json`);
+            document.body.appendChild(dl);
+            dl.click();
+            dl.remove();
+            showToast('Đã tải toàn bộ dữ liệu giải đấu về máy!');
+        }
+function importUniversalAthleteData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            const fileName = file.name.toLowerCase();
+
+            // 1. Xử lý nếu là file Excel (.xlsx, .xls) hoặc CSV
+            if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                        let addedCount = 0;
+                        jsonRows.forEach((row, idx) => {
+                            if (idx === 0) return; // Bỏ qua dòng tiêu đề
+                            
+                            let fullName = row[1] || row[0]; 
+                            let unit = row[2] || row[1];
+                            
+                            if (fullName && typeof fullName === 'string' && fullName.trim() !== '' && fullName.toLowerCase() !== 'họ và tên') {
+                                let newAth = {
+                                    id: 'VDV-' + Date.now().toString().substr(-6) + Math.floor(Math.random()*1000),
+                                    fullName: String(row[1] || '').trim(),
+                                    unit: String(row[2] || 'Chưa rõ').trim(),
+                                    categoryType: String(row[3] || 'Đối kháng').trim(),
+                                    subCategory: String(row[4] || 'Đơn').trim(),
+                                    gender: String(row[5] || 'Nam').trim(),
+                                    ageGroup: String(row[6] || 'Lứa tuổi 1').trim(),
+                                    weightClass: String(row[7] || '-58 kg').trim()
+                                };
+                                
+                                if (!newAth.fullName || newAth.fullName.length < 2) return;
+
+                                athletes.push(newAth);
+                                if (newAth.unit && !unitsList.includes(newAth.unit)) {
+                                    unitsList.push(newAth.unit);
+                                }
+                                addedCount++;
+                            }
+                        });
+
+                        if (addedCount > 0) {
+                            saveData();
+                            showToast(`Đã nhập thành công ${addedCount} VĐV từ file Excel!`);
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            alert('⚠️ Không tìm thấy dữ liệu hợp lệ trong file Excel. Vui lòng kiểm tra lại cấu trúc cột!');
+                        }
+                    } catch (err) {
+                        alert('❌ Lỗi khi đọc file Excel!');
+                        console.error(err);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+                return;
+            }
+
+            // 2. Xử lý nếu là file JSON (.json) hoặc Text
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    let parsedData = JSON.parse(content);
+                    
+                    // Trường hợp A: File JSON tổng hợp toàn giải (có cả VĐV, bốc thăm, sơ đồ, lịch đấu)
+                    if (parsedData && parsedData.athletes && parsedData.brackets) {
+                        athletes = parsedData.athletes || [];
+                        brackets = parsedData.brackets || {};
+                        unitsList = parsedData.units || [];
+                        courtAssignments = parsedData.courtAssignments || {};
+                        weightClasses = parsedData.weightClasses || weightClasses;
+                        if(parsedData.locked !== undefined) isLocked = parsedData.locked;
+                        if(parsedData.deadline) registrationDeadline = parsedData.deadline;
+                        
+                        saveData();
+                        showToast('Đã khôi phục toàn bộ dữ liệu giải đấu (VĐV, bốc thăm, lịch đấu)!');
+                        setTimeout(() => location.reload(), 1000);
+                        return;
+                    }
+
+                    // Trường hợp B: File JSON chỉ là mảng danh sách VĐV đơn thuần
+                    if (Array.isArray(parsedData)) {
+                        parsedData.forEach(item => {
+                            if (item.fullName) {
+                                athletes.push({
+                                    id: item.id || ('VDV-' + Date.now().toString().substr(-6)),
+                                    fullName: item.fullName,
+                                    unit: item.unit || 'Chưa phân loại',
+                                    categoryType: item.categoryType || 'Đối kháng',
+                                    subCategory: item.subCategory || 'Đơn',
+                                    gender: item.gender || 'Nam',
+                                    ageGroup: item.ageGroup || 'Lứa tuổi 1',
+                                    weightClass: item.weightClass || 'N/A'
+                                });
+                                if (item.unit && !unitsList.includes(item.unit)) unitsList.push(item.unit);
+                            }
+                        });
+                        saveData();
+                        showToast('Đã nhập danh sách VĐV từ JSON thành công!');
+                        setTimeout(() => location.reload(), 1000);
+                        return;
+                    }
+                } catch (err) {
+                    alert('❌ Định dạng file không hợp lệ hoặc file bị lỗi cấu trúc JSON!');
+                    console.error(err);
+                }
+            };
+            reader.readAsText(file);
+        }
     </script>
     
 </body>
